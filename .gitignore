@@ -3,19 +3,21 @@
 *.env
 backend/.env
 frontend/.env
+modal-image-editor/.env
 
 # Node Dependencies & Build Artifacts
 node_modules/
 frontend/node_modules/
 dist/
 build/
+frontend/dist/
 
 # Python Virtual Environments & Cache
 backend/.venv/
+modal-image-editor/venv/
 .venv/
 venv/
 __pycache__/
-*.py
 *.pyc
 *.pyo
 *.pyd
