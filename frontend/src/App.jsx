@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import AuthModal from './components/auth/AuthModal';
@@ -7,10 +7,18 @@ import CreatePost from './pages/CreatePost';
 import PostHistory from './pages/PostHistory';
 import Settings from './pages/Settings';
 import { useAuthStore } from './store/authStore';
+import { useTenantStore } from './store/tenantStore';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { isAuthenticated } = useAuthStore();
+  const { fetchProfile } = useTenantStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProfile();
+    }
+  }, [isAuthenticated, fetchProfile]);
 
   if (!isAuthenticated) {
     return <AuthModal />;

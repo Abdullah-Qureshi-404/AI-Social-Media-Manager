@@ -260,7 +260,9 @@ export default function ImageEditor({ imageUrl, postId, onSave, onBack }) {
   };
 
   const addBrandWatermarkStamp = (canvas) => {
-    const watermarkObj = new fabric.IText('★ ARTISANAL CAFE ★', {
+    const { tenantProfile } = useTenantStore.getState();
+    const watermarkText = `★ ${tenantProfile?.restaurant_name?.toUpperCase() || 'MY RESTAURANT'} ★`;
+    const watermarkObj = new fabric.IText(watermarkText, {
       id: 'brand_watermark',
       customType: 'watermark',
       left: 575,

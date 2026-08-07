@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import client from '../api/client';
+import { useTenantStore } from './tenantStore';
 
 export const useAuthStore = create((set) => ({
   user: null,
@@ -11,11 +12,13 @@ export const useAuthStore = create((set) => ({
   setToken: (token) => {
     localStorage.setItem('access_token', token);
     set({ token, isAuthenticated: true });
+    useTenantStore.getState().fetchProfile();
   },
 
   logout: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    useTenantStore.getState().clearTenantState();
     set({ user: null, token: null, isAuthenticated: false });
   },
 
@@ -23,10 +26,11 @@ export const useAuthStore = create((set) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await client.post('/auth/login', { email, password });
-      const { access_token, refresh_token } = res.data;
+      const { access_token, refresh_token, user } = res.data;
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
-      set({ token: access_token, isAuthenticated: true, isLoading: false });
+      set({ user, token: access_token, isAuthenticated: true, isLoading: false });
+      useTenantStore.getState().fetchProfile();
       return true;
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Invalid login credentials';
@@ -47,10 +51,11 @@ export const useAuthStore = create((set) => ({
       });
       // Auto login after signup
       const res = await client.post('/auth/login', { email, password });
-      const { access_token, refresh_token } = res.data;
+      const { access_token, refresh_token, user } = res.data;
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
-      set({ token: access_token, isAuthenticated: true, isLoading: false });
+      set({ user, token: access_token, isAuthenticated: true, isLoading: false });
+      useTenantStore.getState().fetchProfile();
       return true;
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Registration failed';
@@ -61,16 +66,17 @@ export const useAuthStore = create((set) => ({
 
   loginAsDemo: async () => {
     set({ isLoading: true, error: null });
-    const demoEmail = 'owner@bakery.com';
-    const demoPass = 'BakeryOwner123!';
+    const demoEmail = 'owner@restaurant.com';
+    const demoPass = 'RestaurantOwner123!';
 
     try {
       // Try login first
       const res = await client.post('/auth/login', { email: demoEmail, password: demoPass });
-      const { access_token, refresh_token } = res.data;
+      const { access_token, refresh_token, user } = res.data;
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
-      set({ token: access_token, isAuthenticated: true, isLoading: false });
+      set({ user, token: access_token, isAuthenticated: true, isLoading: false });
+      useTenantStore.getState().fetchProfile();
       return true;
     } catch (err) {
       // If login fails, sign up demo user first
@@ -78,15 +84,16 @@ export const useAuthStore = create((set) => ({
         await client.post('/auth/signup', {
           email: demoEmail,
           password: demoPass,
-          full_name: 'Sweet Treats Bakery Owner',
-          business_name: 'Sweet Treats Bakery',
+          full_name: 'Musafor Owner',
+          business_name: 'Musafor Cafe',
           brand_voice: 'friendly',
         });
         const res = await client.post('/auth/login', { email: demoEmail, password: demoPass });
-        const { access_token, refresh_token } = res.data;
+        const { access_token, refresh_token, user } = res.data;
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', refresh_token);
-        set({ token: access_token, isAuthenticated: true, isLoading: false });
+        set({ user, token: access_token, isAuthenticated: true, isLoading: false });
+        useTenantStore.getState().fetchProfile();
         return true;
       } catch (signupErr) {
         set({ error: 'Demo login failed', isLoading: false });

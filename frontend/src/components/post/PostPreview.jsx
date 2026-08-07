@@ -172,7 +172,8 @@ export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
 
     // 3. Add Watermark Badge
     if (withWatermark) {
-      const watermarkObj = new fabric.IText('★ ARTISANAL CAFE ★', {
+      const watermarkText = `★ ${tenantProfile?.restaurant_name?.toUpperCase() || 'MY RESTAURANT'} ★`;
+      const watermarkObj = new fabric.IText(watermarkText, {
         id: 'brand_watermark',
         customType: 'watermark',
         left: canvasWidth - 20,
@@ -339,7 +340,8 @@ export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
     });
 
     if (withWatermark) {
-      const watermarkObj = new fabric.IText('★ ARTISANAL CAFE ★', {
+      const watermarkText = `★ ${tenantProfile?.restaurant_name?.toUpperCase() || 'MY RESTAURANT'} ★`;
+      const watermarkObj = new fabric.IText(watermarkText, {
         id: 'brand_watermark',
         customType: 'watermark',
         left: canvasWidth - 40,
@@ -364,6 +366,9 @@ export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
     canvas.renderAll();
   };
 
+  const igUsername = tenantProfile?.instagram?.username || (tenantProfile?.restaurant_name ? tenantProfile.restaurant_name.toLowerCase().replace(/\s+/g, '_') : 'my_restaurant');
+  const restaurantTitle = tenantProfile?.restaurant_name || 'My Restaurant';
+
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="text-center space-y-1">
@@ -385,10 +390,10 @@ export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
             </div>
             <div>
               <div className="flex items-center space-x-1">
-                <span className="font-bold text-sm text-white">sweet_treats_bakery</span>
+                <span className="font-bold text-sm text-white">{igUsername}</span>
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
               </div>
-              <span className="text-[11px] text-stone-400 block">Artisanal Bakery & Cafe</span>
+              <span className="text-[11px] text-stone-400 block">{restaurantTitle}</span>
             </div>
           </div>
           <MoreHorizontal className="w-5 h-5 text-stone-400 cursor-pointer" />
@@ -416,7 +421,7 @@ export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
           <div className="text-xs text-stone-200 leading-relaxed space-y-1.5">
             {captionText && (
               <p>
-                <span className="font-bold text-white mr-2">sweet_treats_bakery</span>
+                <span className="font-bold text-white mr-2">{igUsername}</span>
                 {captionText}
               </p>
             )}
