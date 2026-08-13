@@ -4,6 +4,7 @@ from celery import shared_task
 
 from app.core.database import AsyncSessionLocal
 from app.core.logging import logger
+from app.core.token_encryption import decrypt_token
 from app.models.post import PostStatusEnum
 from app.repositories.post_repository import post_repository
 from app.services.instagram_service import instagram_service
@@ -60,11 +61,28 @@ async def _async_publish_due_posts():
                     await db.commit()
                     continue
 
-                # 2. Publish post via Meta Instagram Graph API
+                # 3. Decrypt the stored access token before using it
+                try:
+                    plaintext_token = decrypt_token(user.instagram_token)
+                except Exception:
+                    logger.error(f"Post {post.id}: Instagram token decryption failed for tenant {user.id}")
+                    post.status = PostStatusEnum.FAILED
+                    post.error_message = "Instagram token is corrupted. Please reconnect Instagram in Settings."
+                    await db.commit()
+                    continue
+
+                if not plaintext_token:
+                    logger.error(f"Post {post.id}: Instagram token is empty after decryption for tenant {user.id}")
+                    post.status = PostStatusEnum.FAILED
+                    post.error_message = "Missing Instagram access token. Please reconnect Instagram in Settings."
+                    await db.commit()
+                    continue
+
+                # 4. Publish post via Meta Instagram Graph API
                 image_target_url = post.permanent_image_url or post.temp_image_url or post.original_image_url
                 media_id = await instagram_service.publish_photo_post(
                     instagram_user_id=user.instagram_user_id,
-                    access_token=user.instagram_token,
+                    access_token=plaintext_token,
                     image_url=image_target_url,
                     caption=post.caption or "",
                 )

@@ -1,9 +1,11 @@
 import client from './client';
 
 export const postsApi = {
-  async uploadPhoto(file) {
+  async uploadPhoto(file, menuItemId, recommendationId) {
     const formData = new FormData();
     formData.append('file', file);
+    if (menuItemId) formData.append('menu_item_id', menuItemId);
+    if (recommendationId) formData.append('recommendation_id', recommendationId);
     const response = await client.post('/posts/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

@@ -41,6 +41,12 @@ app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture
+async def db_session():
+    async with TestingSessionLocal() as session:
+        yield session
+
+
+@pytest.fixture
 async def client():
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

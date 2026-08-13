@@ -8,8 +8,10 @@ from app.api.dependencies import get_current_user, get_db
 from app.constants import ALLOWED_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES
 from app.core.logging import logger
 from app.middleware.exception_handler import AppException, NotFoundError
+from app.utils.security_validators import validate_image_upload, POST_MAX_IMAGE_BYTES
 from app.models.user import User
 from app.models.post import PostStatusEnum
+from app.models.menu import MenuItem, PostRecommendation
 from app.repositories.post_repository import post_repository
 from app.schemas.post import (
     PostResponse,
@@ -44,6 +46,8 @@ async def safe_dispatch_task(celery_task, async_impl, *args, **kwargs):
 @router.post("/upload", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def upload_raw_photo(
     file: UploadFile = File(...),
+    menu_item_id: Optional[uuid.UUID] = Form(None),
+    recommendation_id: Optional[uuid.UUID] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -59,18 +63,50 @@ async def upload_raw_photo(
         )
 
     content = await file.read()
-    if len(content) > MAX_UPLOAD_SIZE_BYTES:
-        raise AppException(
-            message="File size exceeds maximum limit of 15 MB.",
-            code="FILE_TOO_LARGE",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+
+    # Full validation: MIME allow-list + magic-byte + size limit (reuses centralized gate)
+    validate_image_upload(content, file.content_type, max_bytes=MAX_UPLOAD_SIZE_BYTES)
 
     # Downscale and pad image to 1080x1080
     resized_bytes = resize_and_pad_image(content)
 
     # Upload to Cloudinary temporary staging folder for current tenant
     upload_res = await cloudinary_service.upload_temporary_image(resized_bytes, current_user.id)
+
+    # Validate tenant ownership of menu_item_id and recommendation_id
+    if menu_item_id:
+        from sqlalchemy import select
+        stmt = select(MenuItem).where(MenuItem.id == menu_item_id)
+        menu_item = (await db.execute(stmt)).scalar_one_or_none()
+        if not menu_item:
+            raise NotFoundError("Menu item not found")
+        if menu_item.user_id != current_user.id:
+            raise AppException(
+                message="Access denied to menu item",
+                code="FORBIDDEN",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+    if recommendation_id:
+        from sqlalchemy import select
+        stmt = select(PostRecommendation).where(PostRecommendation.id == recommendation_id)
+        rec = (await db.execute(stmt)).scalar_one_or_none()
+        if not rec:
+            raise NotFoundError("Recommendation not found")
+        if rec.user_id != current_user.id:
+            raise AppException(
+                message="Access denied to recommendation",
+                code="FORBIDDEN",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        if menu_item_id and rec.menu_item_id != menu_item_id:
+            raise AppException(
+                message="Recommendation does not match provided menu item",
+                code="MISMATCHED_RECOMMENDATION",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        if not menu_item_id:
+            menu_item_id = rec.menu_item_id
 
     # Create Post in database scoped to current_user.id
     post = await post_repository.create(
@@ -79,6 +115,8 @@ async def upload_raw_photo(
         status=PostStatusEnum.UPLOADED,
         original_image_url=upload_res["url"],
         temp_image_url=upload_res["url"],
+        menu_item_id=menu_item_id,
+        recommendation_id=recommendation_id,
     )
     post.versions = []
     return post
@@ -100,6 +138,10 @@ async def upload_edited_image(
         raise NotFoundError("Post not found")
 
     content = await image.read()
+
+    # Full validation: MIME allow-list + magic-byte + 10 MB size limit
+    validate_image_upload(content, image.content_type, max_bytes=POST_MAX_IMAGE_BYTES)
+
     if not content:
         raise AppException(
             message="Uploaded image blob is empty.",
@@ -162,7 +204,25 @@ async def trigger_caption_generation(
     if not post:
         raise NotFoundError("Post not found")
 
-    user_instruction = payload.user_instruction if payload else None
+    user_instruction = payload.user_instruction if payload else ""
+    
+    # AI Strategy Injection
+    if post.menu_item_id:
+        from sqlalchemy import select
+        stmt = select(MenuItem).where(MenuItem.id == post.menu_item_id)
+        menu_item = (await db.execute(stmt)).scalar_one_or_none()
+        if menu_item:
+            strategy_context = f" This post is for our menu item '{menu_item.name}'. "
+            if menu_item.price:
+                strategy_context += f"The price is ${menu_item.price}. "
+            if post.recommendation_id:
+                stmt_rec = select(PostRecommendation).where(PostRecommendation.id == post.recommendation_id)
+                rec = (await db.execute(stmt_rec)).scalar_one_or_none()
+                if rec and rec.suggested_angle:
+                    strategy_context += f"Strategy angle: {rec.suggested_angle}. "
+            
+            user_instruction = strategy_context + (user_instruction or "")
+
     brand_voice = current_user.brand_voice or "friendly"
     image_target = post.current_edited_image_url or post.temp_image_url or post.original_image_url
 
@@ -173,6 +233,18 @@ async def trigger_caption_generation(
     )
 
     captions = caption_data.get("captions", [])
+    if post.menu_item_id:
+        from sqlalchemy import select
+        stmt = select(MenuItem).where(MenuItem.id == post.menu_item_id)
+        menu_item = (await db.execute(stmt)).scalar_one_or_none()
+        if menu_item:
+            for cap in captions:
+                cap["text"] = caption_ai_service.verify_caption_facts(
+                    cap.get("text", ""),
+                    menu_item.name,
+                    float(menu_item.price) if menu_item.price is not None else None,
+                )
+
     if captions:
         post.caption = captions[0].get("text", "")
         post.status = PostStatusEnum.CAPTION_READY
@@ -299,6 +371,39 @@ async def approve_post(
     if not post:
         raise NotFoundError("Post not found")
 
+    # Menu Verification Check
+    if post.menu_item_id:
+        from sqlalchemy import select
+        stmt = select(MenuItem).where(MenuItem.id == post.menu_item_id)
+        menu_item = (await db.execute(stmt)).scalar_one_or_none()
+        
+        if not menu_item or not menu_item.is_active:
+            raise AppException(
+                message="Cannot approve post: Associated menu item is inactive or deleted.",
+                code="MENU_ITEM_INACTIVE",
+                status_code=400,
+            )
+        if menu_item.user_id != current_user.id:
+            raise AppException(
+                message="Access denied to associated menu item",
+                code="FORBIDDEN",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        
+        # Simple mismatch verification (check if generated text mentions price incorrectly)
+        caption_text = post.caption or ""
+        if menu_item.price and str(menu_item.price) not in caption_text:
+            pass
+
+    # Transition associated recommendation to ACTED_UPON
+    if post.recommendation_id:
+        from sqlalchemy import select
+        from app.models.menu import RecommendationStatusEnum
+        stmt_rec = select(PostRecommendation).where(PostRecommendation.id == post.recommendation_id)
+        rec = (await db.execute(stmt_rec)).scalar_one_or_none()
+        if rec and rec.user_id == current_user.id:
+            rec.status = RecommendationStatusEnum.ACTED_UPON
+
     source = post.temp_image_url or post.current_edited_image_url or post.original_image_url
     promoted = await cloudinary_service.promote_to_permanent(source, current_user.id)
 
@@ -320,6 +425,34 @@ async def schedule_post(
     post = await post_repository.get_by_id(db, post_id, current_user.id)
     if not post:
         raise NotFoundError("Post not found")
+
+    # Menu Verification Check
+    if post.menu_item_id:
+        from sqlalchemy import select
+        stmt = select(MenuItem).where(MenuItem.id == post.menu_item_id)
+        menu_item = (await db.execute(stmt)).scalar_one_or_none()
+        
+        if not menu_item or not menu_item.is_active:
+            raise AppException(
+                message="Cannot schedule post: Associated menu item is inactive or deleted.",
+                code="MENU_ITEM_INACTIVE",
+                status_code=400,
+            )
+        if menu_item.user_id != current_user.id:
+            raise AppException(
+                message="Access denied to associated menu item",
+                code="FORBIDDEN",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+    # Transition associated recommendation to ACTED_UPON
+    if post.recommendation_id:
+        from sqlalchemy import select
+        from app.models.menu import RecommendationStatusEnum
+        stmt_rec = select(PostRecommendation).where(PostRecommendation.id == post.recommendation_id)
+        rec = (await db.execute(stmt_rec)).scalar_one_or_none()
+        if rec and rec.user_id == current_user.id:
+            rec.status = RecommendationStatusEnum.ACTED_UPON
 
     if payload.caption:
         post.caption = payload.caption

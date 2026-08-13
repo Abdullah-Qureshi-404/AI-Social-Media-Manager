@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.api.dependencies import get_current_user, get_db
+from app.core.token_encryption import decrypt_token, encrypt_token
 from app.models.user import User
 from app.models.post import Post
 from app.schemas.user import (
@@ -129,26 +131,29 @@ async def connect_instagram(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Connect tenant Meta Instagram Business Account with real profile data."""
-    now = datetime.utcnow()
-    username = current_user.business_name.lower().replace(" ", "_") if current_user.business_name else "my_restaurant"
-
-    current_user.instagram_user_id = f"ig_bus_{user_id_short(current_user.id)}"
-    current_user.instagram_token = f"EAAB_{user_id_short(current_user.id)}_token"
-    current_user.instagram_username = username
-    current_user.instagram_business_name = current_user.business_name or "My Restaurant"
-    current_user.instagram_profile_picture = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=200&q=80"
-    current_user.instagram_followers_count = 1420
-    current_user.instagram_following_count = 180
-    current_user.instagram_posts_count = 64
-    current_user.instagram_category = "Food & Beverage / Restaurant"
-    current_user.instagram_connected_at = now
-    current_user.instagram_last_sync = now
-    current_user.token_expires_at = now + timedelta(days=60)
-
-    await db.commit()
-    await db.refresh(current_user)
-    return await build_tenant_profile_response(current_user, db)
+    """
+    Initiate Meta Instagram OAuth.  This stub is kept for backward compatibility
+    with the frontend store which calls POST /tenant/instagram/connect.
+    The real OAuth start is GET /tenant/instagram/connect (browser redirect).
+    This POST variant returns instructions for the frontend to redirect the browser.
+    """
+    from app.core.config import settings
+    if not settings.META_APP_ID:
+        from app.middleware.exception_handler import AppException
+        raise AppException(
+            message="Instagram connection is not yet configured on this server.",
+            code="META_NOT_CONFIGURED",
+            status_code=503,
+        )
+    # Tell the frontend where to navigate for the real OAuth flow
+    return JSONResponse(
+        status_code=200,
+        content={
+            "oauth_redirect": True,
+            "connect_url": "/api/v1/tenant/instagram/connect",
+            "message": "Navigate to connect_url to start Instagram OAuth.",
+        },
+    )
 
 
 @tenant_router.post("/instagram/disconnect", response_model=TenantProfileResponse)
@@ -156,13 +161,19 @@ async def disconnect_instagram(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Disconnect tenant Meta Instagram Business Account."""
+    """Disconnect tenant Meta Instagram Business Account — delegates to OAuth router."""
     current_user.instagram_user_id = None
     current_user.instagram_token = None
     current_user.token_expires_at = None
     current_user.instagram_connected_at = None
     current_user.instagram_last_sync = None
-
+    current_user.instagram_username = None
+    current_user.instagram_business_name = None
+    current_user.instagram_profile_picture = None
+    current_user.instagram_followers_count = 0
+    current_user.instagram_following_count = 0
+    current_user.instagram_posts_count = 0
+    current_user.instagram_category = None
     await db.commit()
     await db.refresh(current_user)
     return await build_tenant_profile_response(current_user, db)
@@ -173,12 +184,37 @@ async def refresh_instagram_data(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Refresh Instagram profile metrics."""
-    if current_user.instagram_token:
-        current_user.instagram_last_sync = datetime.utcnow()
-        current_user.instagram_followers_count += 3
+    """Refresh Instagram token and metrics using the stored real token."""
+    from app.services.instagram_service import instagram_service
+    from app.middleware.exception_handler import AppException
+    from datetime import timezone
+
+    if not current_user.instagram_token or not current_user.instagram_user_id:
+        raise AppException(
+            message="No Instagram account connected. Please connect first.",
+            code="INSTAGRAM_NOT_CONNECTED",
+            status_code=400,
+        )
+
+    try:
+        plaintext_token = decrypt_token(current_user.instagram_token)
+    except ValueError:
+        raise AppException(
+            message="Instagram token is corrupted. Please reconnect.",
+            code="INSTAGRAM_TOKEN_CORRUPTED",
+            status_code=400,
+        )
+
+    try:
+        ig_info = await instagram_service.get_ig_user_info(plaintext_token)
+        current_user.instagram_followers_count = ig_info.get("followers_count", current_user.instagram_followers_count)
+        current_user.instagram_following_count = ig_info.get("follows_count", current_user.instagram_following_count)
+        current_user.instagram_posts_count = ig_info.get("media_count", current_user.instagram_posts_count)
+        current_user.instagram_last_sync = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(current_user)
+    except AppException:
+        pass  # Return current profile even if refresh fails
 
     return await build_tenant_profile_response(current_user, db)
 

@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.core.logging import logger
+from app.core.token_encryption import decrypt_token, encrypt_token
 from app.models.user import User
 from app.services.instagram_service import instagram_service
 
@@ -39,15 +40,29 @@ async def _async_refresh_tokens():
 
         for user in expiring_users:
             try:
+                # Decrypt stored token before sending to Meta
+                try:
+                    plaintext_token = decrypt_token(user.instagram_token)
+                except Exception:
+                    logger.error(f"Token decryption failed for tenant {user.id} — skipping refresh")
+                    continue
+
+                if not plaintext_token:
+                    logger.warning(f"Empty decrypted token for tenant {user.id} — skipping")
+                    continue
+
                 # Refresh token via Meta Graph API
-                refresh_res = await instagram_service.refresh_long_lived_token(user.instagram_token)
-                user.instagram_token = refresh_res["access_token"]
+                refresh_res = await instagram_service.refresh_long_lived_token(plaintext_token)
+                new_plaintext_token = refresh_res["access_token"]
+
+                # Re-encrypt the refreshed token before saving
+                user.instagram_token = encrypt_token(new_plaintext_token)
                 user.token_expires_at = refresh_res["expires_at"]
                 refreshed_count += 1
                 await db.commit()
                 logger.info(f"Successfully refreshed Meta access token for tenant {user.id}")
             except Exception as e:
                 await db.rollback()
-                logger.error(f"Failed to refresh token for tenant {user.id}: {e}")
+                logger.error(f"Failed to refresh token for tenant {user.id}: {type(e).__name__}")
 
         return refreshed_count

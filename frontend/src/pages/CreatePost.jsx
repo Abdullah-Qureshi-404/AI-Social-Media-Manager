@@ -11,8 +11,9 @@ import EditModal from '../components/post/EditModal';
 import { usePostFlowStore } from '../store/postFlowStore';
 import { postsApi } from '../api/postsApi';
 import { subscribeToJobStream } from '../api/jobStreamer';
+import { Lightbulb } from 'lucide-react';
 
-export default function CreatePost() {
+export default function CreatePost({ context }) {
   const {
     activeStep,
     setStep,
@@ -148,8 +149,19 @@ export default function CreatePost() {
         })}
       </div>
 
+      {/* Context Banner */}
+      {context?.menuItemId && activeStep === 1 && (
+        <div className="bg-amber-900/30 border border-amber-500/30 p-4 rounded-xl flex items-center space-x-3">
+          <Lightbulb className="w-6 h-6 text-amber-500 shrink-0" />
+          <div>
+            <h4 className="font-bold text-amber-400">AI Strategy Active</h4>
+            <p className="text-sm text-stone-300">Upload a photo of your menu item to fulfill this recommendation. Gemini will automatically tailor the caption.</p>
+          </div>
+        </div>
+      )}
+
       {/* Step 1 View: Upload Raw Photo */}
-      {activeStep === 1 && <ImageUploader />}
+      {activeStep === 1 && <ImageUploader context={context} />}
 
       {/* Step 2 View: Photo Enhancement */}
       {activeStep === 2 && currentPost && (

@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_current_user
@@ -9,8 +9,11 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    decode_token_claims,
+    add_token_to_blocklist,
 )
 from app.middleware.exception_handler import AppException, UnauthorizedError
+from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.repositories.user_repository import user_repository
 from app.schemas.auth import LoginRequest, RefreshTokenRequest, TokenResponse
@@ -20,7 +23,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def signup(request: Request, user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new tenant user account."""
     existing_user = await user_repository.get_by_email(db, user_in.email)
     if existing_user:
@@ -39,7 +43,8 @@ async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Authenticate user credentials and issue JWT access + refresh tokens."""
     user = await user_repository.get_by_email(db, credentials.email)
     if not user or not verify_password(credentials.password, user.password_hash):
@@ -88,6 +93,41 @@ async def refresh_token(request: RefreshTokenRequest, db: AsyncSession = Depends
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(current_user: User = Depends(get_current_user)):
-    """Acknowledge logout request."""
+async def logout(request: Request, current_user: User = Depends(get_current_user)):
+    """
+    Blacklist both the current JWT access token and the supplied refresh token.
+    Uses actual remaining lifetime as Redis TTL to avoid over-caching.
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        raw_access_token = auth_header.split(" ", 1)[1]
+        access_payload = decode_token(raw_access_token)
+        if access_payload and "jti" in access_payload:
+            add_token_to_blocklist(
+                access_payload["jti"],
+                exp_timestamp=access_payload.get("exp"),
+            )
+
+    # Also invalidate the refresh token if the client sends it in the JSON body.
+    # We intentionally use decode_token_claims (no expiry check) so an already-expired
+    # refresh token can still be recorded in the blocklist within its original window.
+    body: dict = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass  # Body is optional — logout is best-effort for the refresh token
+
+    refresh_token_str = body.get("refresh_token") if isinstance(body, dict) else None
+    if refresh_token_str:
+        refresh_claims = decode_token_claims(refresh_token_str)
+        if (
+            refresh_claims
+            and refresh_claims.get("type") == "refresh"
+            and "jti" in refresh_claims
+        ):
+            add_token_to_blocklist(
+                refresh_claims["jti"],
+                exp_timestamp=refresh_claims.get("exp"),
+            )
+
     return {"message": "Successfully logged out"}

@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = ""
     META_APP_ID: str = ""
     META_APP_SECRET: str = ""
+    # Full URL the Meta OAuth callback hits — must match exactly in Meta Developer Console
+    # Example: https://api.yourdomain.com/api/v1/tenant/instagram/callback
+    META_REDIRECT_URI: str = "http://localhost:8000/api/v1/tenant/instagram/callback"
+    # URL of the frontend SPA — used to redirect browser after OAuth completes
+    FRONTEND_URL: str = "http://localhost:5173"
+    # Fernet key for encrypting Instagram access tokens at rest.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    FERNET_SECRET_KEY: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(selected_env),

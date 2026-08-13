@@ -6,11 +6,13 @@ import Dashboard from './pages/Dashboard';
 import CreatePost from './pages/CreatePost';
 import PostHistory from './pages/PostHistory';
 import Settings from './pages/Settings';
+import MenuManager from './pages/MenuManager';
 import { useAuthStore } from './store/authStore';
 import { useTenantStore } from './store/tenantStore';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [createPostContext, setCreatePostContext] = useState(null);
   const { isAuthenticated } = useAuthStore();
   const { fetchProfile } = useTenantStore();
 
@@ -30,8 +32,16 @@ export default function App() {
       <div className="flex flex-1">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-          {activeTab === 'dashboard' && <Dashboard onStartCreate={() => setActiveTab('create')} />}
-          {activeTab === 'create' && <CreatePost />}
+          {activeTab === 'dashboard' && (
+            <Dashboard 
+              onStartCreate={(menuItemId, recommendationId) => {
+                setCreatePostContext({ menuItemId, recommendationId });
+                setActiveTab('create');
+              }} 
+            />
+          )}
+          {activeTab === 'menu' && <MenuManager />}
+          {activeTab === 'create' && <CreatePost context={createPostContext} />}
           {activeTab === 'history' && <PostHistory />}
           {activeTab === 'settings' && <Settings />}
         </main>

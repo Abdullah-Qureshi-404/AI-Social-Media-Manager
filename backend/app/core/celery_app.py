@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.tasks.refresh_tokens",
         "app.tasks.cleanup_assets",
         "app.tasks.fetch_analytics",
+        "app.tasks.strategy_tasks",
     ],
 )
 
@@ -48,5 +49,9 @@ celery_app.conf.beat_schedule = {
     "fetch-post-analytics-every-6-hours": {
         "task": "app.tasks.fetch_analytics.fetch_published_analytics_task",
         "schedule": crontab(hour="*/6", minute=0),  # Every 6 hours
+    },
+    "generate-daily-content-strategy": {
+        "task": "app.tasks.strategy_tasks.run_all_strategy_generations_task",
+        "schedule": crontab(hour=1, minute=0),  # 01:00 AM daily
     },
 }

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 
@@ -26,6 +26,27 @@ app.state.limiter = limiter
 # Register Global Exception Handlers
 app.add_exception_handler(Exception, global_exception_handler)
 
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "img-src 'self' data: https:; "
+        "script-src 'self' 'unsafe-inline'; "
+        "connect-src 'self' https://api.cloudinary.com https://*.supabase.co https://res.cloudinary.com;"
+    )
+    return response
+
+
 # Attach Middlewares
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
@@ -34,6 +55,7 @@ app.add_middleware(
         "http://localhost:5173",  # Vite Dev Server
         "http://localhost:3000",
         "http://127.0.0.1:5173",
+        "https://yourdomain.com",  # Production domain placeholder
     ],
     allow_credentials=True,
     allow_methods=["*"],

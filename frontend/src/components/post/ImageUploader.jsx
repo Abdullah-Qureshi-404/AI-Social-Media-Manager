@@ -3,7 +3,7 @@ import { UploadCloud, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { postsApi } from '../../api/postsApi';
 import { usePostFlowStore } from '../../store/postFlowStore';
 
-export default function ImageUploader() {
+export default function ImageUploader({ context }) {
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setCurrentPost, setStep } = usePostFlowStore();
@@ -12,7 +12,7 @@ export default function ImageUploader() {
     if (!file) return;
     setLoading(true);
     try {
-      const post = await postsApi.uploadPhoto(file);
+      const post = await postsApi.uploadPhoto(file, context?.menuItemId, context?.recommendationId);
       setCurrentPost(post);
       setStep(2); // Proceed to AI Edit step
     } catch (err) {

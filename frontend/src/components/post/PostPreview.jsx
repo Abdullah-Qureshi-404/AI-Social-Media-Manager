@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fabric } from 'fabric';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Edit3, Calendar, ShieldCheck, Loader2 } from 'lucide-react';
 import { usePostFlowStore } from '../../store/postFlowStore';
+import { useTenantStore } from '../../store/tenantStore';
 import { postsApi } from '../../api/postsApi';
 
 export default function PostPreview({ onProceedToSchedule, onOpenEditModal }) {
+  const { tenantProfile } = useTenantStore();
   const {
     currentPost,
     setCurrentPost,

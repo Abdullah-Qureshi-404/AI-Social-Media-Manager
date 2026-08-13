@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.post_version import PostImageVersion
     from app.models.analytics import Analytics
+    from app.models.menu import MenuItem, PostRecommendation
 
 
 class PostStatusEnum(str, enum.Enum):
@@ -104,6 +105,18 @@ class Post(Base, TimestampMixin):
         DateTime(timezone=True),
         nullable=True,
     )
+    menu_item_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("menu_items.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    recommendation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("post_recommendations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Smart Overlay Design System (Zero-Thinking Overlay)
     image_analysis_json: Mapped[Optional[dict]] = mapped_column(
@@ -129,6 +142,14 @@ class Post(Base, TimestampMixin):
         back_populates="post",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    menu_item: Mapped[Optional["MenuItem"]] = relationship(
+        "MenuItem",
+        back_populates="posts",
+    )
+    recommendation: Mapped[Optional["PostRecommendation"]] = relationship(
+        "PostRecommendation",
+        back_populates="posts",
     )
 
     __table_args__ = (

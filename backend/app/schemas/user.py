@@ -1,7 +1,8 @@
 import uuid
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from urllib.parse import urlparse
 
 
 class UserBase(BaseModel):
@@ -75,3 +76,39 @@ class UpdateTenantProfileRequest(BaseModel):
     owner_name: Optional[str] = None
     brand_voice: Optional[str] = None
     logo_url: Optional[str] = None
+
+    @field_validator("logo_url", mode="before")
+    @classmethod
+    def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
+        """Reject unsafe URL schemes and internal-network targets."""
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        try:
+            parsed = urlparse(v)
+        except Exception:
+            raise ValueError("Invalid logo_url: could not parse URL.")
+
+        # Only permit https and http
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError(
+                "logo_url must use http:// or https://. "
+                "Schemes such as javascript:, data:, file:, and ftp: are not permitted."
+            )
+
+        # Reject bare schemeless or empty hosts
+        hostname = (parsed.hostname or "").lower()
+        if not hostname:
+            raise ValueError("logo_url must include a valid hostname.")
+
+        # Block internal/loopback hosts
+        _UNSAFE_HOSTS = {
+            "localhost", "127.0.0.1", "::1", "0.0.0.0",
+            "169.254.169.254",  # AWS/GCP metadata endpoint
+        }
+        if hostname in _UNSAFE_HOSTS or hostname.endswith(".local") or hostname.endswith(".internal"):
+            raise ValueError("logo_url must not point to an internal or private host.")
+
+        return v

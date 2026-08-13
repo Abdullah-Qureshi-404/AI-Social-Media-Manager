@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Instagram, Sliders, Store, User, RefreshCw, Unlink, ShieldCheck, CheckCircle2, Loader2, HardDrive, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Instagram, Sliders, Store, User, RefreshCw, Unlink, ShieldCheck, CheckCircle2, Loader2, HardDrive, Sparkles, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useTenantStore } from '../store/tenantStore';
 
 export default function Settings() {
-  const { tenantProfile, updateProfile, connectInstagram, disconnectInstagram, refreshInstagram, isLoading } = useTenantStore();
+  const { tenantProfile, updateProfile, connectInstagram, disconnectInstagram, refreshInstagram, isLoading, fetchProfile } = useTenantStore();
 
   const [restaurantName, setRestaurantName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [brandVoice, setBrandVoice] = useState('friendly');
   const [isSaving, setIsSaving] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [oauthBanner, setOauthBanner] = useState(null); // { type: 'success'|'error', msg: string }
+
+  // Detect OAuth callback result from query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('oauth_success')) {
+      setOauthBanner({ type: 'success', msg: 'Instagram Business Account connected successfully!' });
+      // Refresh profile to show the real connected account
+      fetchProfile();
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('oauth_error')) {
+      const errMsg = params.get('oauth_error') || 'Connection failed. Please try again.';
+      setOauthBanner({ type: 'error', msg: errMsg });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     if (tenantProfile) {
@@ -39,10 +56,13 @@ export default function Settings() {
   const handleConnectIg = async () => {
     setIsConnecting(true);
     try {
+      // connectInstagram() calls POST /initiate (JWT in header) then navigates browser.
+      // If the API call fails before navigation, show an error banner.
       await connectInstagram();
-      alert('Instagram Business Account successfully connected!');
+      // Note: if navigation succeeds the page will redirect — code below won't run.
     } catch (err) {
-      alert('Failed to connect Instagram.');
+      const msg = err?.response?.data?.error?.message || err?.message || 'Failed to start Instagram connection.';
+      setOauthBanner({ type: 'error', msg });
     } finally {
       setIsConnecting(false);
     }
@@ -52,7 +72,6 @@ export default function Settings() {
     if (window.confirm('Are you sure you want to disconnect your Instagram Business account?')) {
       try {
         await disconnectInstagram();
-        alert('Instagram account disconnected.');
       } catch (err) {
         alert('Failed to disconnect Instagram.');
       }
@@ -62,7 +81,6 @@ export default function Settings() {
   const handleRefreshIg = async () => {
     try {
       await refreshInstagram();
-      alert('Instagram account metrics refreshed!');
     } catch (err) {
       // Ignore
     }
@@ -71,8 +89,34 @@ export default function Settings() {
   const ig = tenantProfile?.instagram || { connected: false };
   const quota = tenantProfile?.quota || { free_edits_remaining: 3, max_edits_allowed: 3, storage_usage: '1.2 GB / 5.0 GB' };
 
+  // Format token expiry
+  const formatExpiry = (expiresAt) => {
+    if (!expiresAt) return 'Unknown';
+    const d = new Date(expiresAt);
+    const now = new Date();
+    const daysLeft = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) return 'Expired';
+    return `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`;
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-12">
+
+      {/* OAuth Result Banner */}
+      {oauthBanner && (
+        <div className={`flex items-start justify-between gap-3 p-4 rounded-2xl border text-sm font-medium ${
+          oauthBanner.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        }`}>
+          <div className="flex items-center gap-2">
+            {oauthBanner.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+            <span>{oauthBanner.msg}</span>
+          </div>
+          <button onClick={() => setOauthBanner(null)} className="text-xs opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between border-b border-stone-800 pb-4">
         <div>
           <h2 className="text-2xl font-extrabold text-white flex items-center space-x-2.5">
@@ -245,7 +289,9 @@ export default function Settings() {
               </div>
               <div>
                 Token Status:{' '}
-                <span className="text-emerald-400 font-semibold">Valid 60 Days</span>
+                <span className={ig.expires_at && new Date(ig.expires_at) <= new Date() ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+                  {formatExpiry(ig.expires_at)}
+                </span>
               </div>
             </div>
           </div>

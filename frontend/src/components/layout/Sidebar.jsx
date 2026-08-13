@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusCircle, LayoutDashboard, History, Settings } from 'lucide-react';
+import { PlusCircle, LayoutDashboard, History, Settings, ListPlus } from 'lucide-react';
 import { useTenantStore } from '../../store/tenantStore';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -8,6 +8,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const navItems = [
     { id: 'create', label: 'Create Post', icon: PlusCircle },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'menu', label: 'Menu Intelligence', icon: ListPlus },
     { id: 'history', label: 'Post History', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];

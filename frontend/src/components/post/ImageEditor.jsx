@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { postsApi } from '../../api/postsApi';
 import { usePostFlowStore } from '../../store/postFlowStore';
+import { useTenantStore } from '../../store/tenantStore';
 
 const FONT_SIZES = [14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 56, 64, 72];
 const FONT_FAMILIES = [

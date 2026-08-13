@@ -267,17 +267,6 @@ export default function AuthIllustration({ focusedField, isPasswordShow }) {
           </motion.div>
         </div>
       </div>
-
-      {/* Bottom Trust Badge */}
-      <div className="relative z-20 space-y-1 text-center sm:text-left">
-        <div className="flex items-center justify-center sm:justify-start space-x-1.5 text-amber-400 text-xs">
-          <ShieldCheck className="w-4 h-4 text-amber-400" />
-          <span className="text-stone-300 font-bold text-xs">Interactive Eye & Body Tracking</span>
-        </div>
-        <p className="text-xs text-stone-400 leading-relaxed">
-          Move your cursor or focus form inputs to see the characters lean, look, and react in real-time.
-        </p>
-      </div>
     </div>
   );
 }
