@@ -120,8 +120,8 @@ class PostRepository(BaseRepository[Post]):
                 post.status = PostStatusEnum.POSTING
                 post.updated_at = now
 
-            # 3. Flush changes inside the transaction block
-            await db.flush()
+            # 3. Commit claim immediately so row lock is released and status is committed
+            await db.commit()
             return claimed_posts
 
         except Exception as e:

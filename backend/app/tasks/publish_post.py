@@ -7,6 +7,7 @@ from app.core.logging import logger
 from app.core.token_encryption import decrypt_token
 from app.models.post import PostStatusEnum
 from app.repositories.post_repository import post_repository
+from app.repositories.user_repository import user_repository
 from app.services.instagram_service import instagram_service
 
 
@@ -28,12 +29,12 @@ async def _async_publish_due_posts():
         if not due_posts:
             return 0
 
-        logger.info(f"Celery Beat claimed {len(due_posts)} due posts for publishing")
+        logger.info(f"Background worker claimed {len(due_posts)} due post(s) for publishing")
 
         for post in due_posts:
             try:
-                # Eager load tenant user
-                user = post.user
+                # Eager load tenant user via repository
+                user = await user_repository.get_by_id(db, post.user_id)
                 if not user or not user.instagram_user_id or not user.instagram_token:
                     logger.error(f"Post {post.id} tenant missing Meta Instagram Business credentials")
                     post.status = PostStatusEnum.FAILED
