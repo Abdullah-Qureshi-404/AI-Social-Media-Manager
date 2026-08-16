@@ -31,19 +31,30 @@ app.add_exception_handler(Exception, global_exception_handler)
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "img-src 'self' data: https:; "
-        "script-src 'self' 'unsafe-inline'; "
-        "connect-src 'self' https://api.cloudinary.com https://*.supabase.co https://res.cloudinary.com;"
-    )
+
+    # Swagger UI needs its own scripts/styles.
+    # Don't apply CSP to Swagger documentation in development.
+    if request.url.path not in ["/docs", "/redoc"]:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "img-src 'self' data: https:; "
+            "script-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' "
+            "https://api.cloudinary.com "
+            "https://*.supabase.co "
+            "https://res.cloudinary.com;"
+        )
+
     return response
 
 

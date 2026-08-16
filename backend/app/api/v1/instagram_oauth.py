@@ -130,13 +130,11 @@ def _consume_init_token(init_token: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
-# Helper: build the Meta authorization URL
+# Helper: build the Meta/Instagram authorization URL
 # ---------------------------------------------------------------------------
 _REQUIRED_SCOPES = [
-    "instagram_basic",
-    "instagram_content_publish",
-    "pages_show_list",
-    "pages_read_engagement",
+    "instagram_business_basic",
+    "instagram_business_content_publish",
 ]
 
 
@@ -144,11 +142,12 @@ def _build_meta_auth_url(state: str) -> str:
     params = {
         "client_id": settings.META_APP_ID,
         "redirect_uri": settings.META_REDIRECT_URI,
-        "scope": ",".join(_REQUIRED_SCOPES),
         "response_type": "code",
+        "scope": ",".join(_REQUIRED_SCOPES),
         "state": state,
+        "force_reauth": "true",
     }
-    return "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
+    return "https://www.instagram.com/oauth/authorize?" + urllib.parse.urlencode(params)
 
 
 # ---------------------------------------------------------------------------
@@ -326,8 +325,9 @@ async def instagram_callback(
 
     try:
         # 5. Exchange authorization code for short-lived token (server-side)
+        clean_code = code.split("#")[0] if code else ""
         short_token_data = await instagram_service.exchange_code_for_token(
-            code=code,
+            code=clean_code,
             redirect_uri=settings.META_REDIRECT_URI,
         )
         short_token = short_token_data["access_token"]

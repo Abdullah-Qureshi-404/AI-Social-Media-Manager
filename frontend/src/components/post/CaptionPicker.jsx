@@ -259,7 +259,7 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
           disabled={!canAdvance}
           className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-stone-950 font-extrabold rounded-xl shadow-xl transition flex items-center justify-center space-x-2 text-sm"
         >
-          <span>Next: Text & Logo Overlay</span>
+          <span>Next: Text & Logo Overlay (Optional)</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

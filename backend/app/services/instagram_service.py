@@ -84,7 +84,7 @@ class InstagramService:
     async def refresh_long_lived_token(self, current_token: str) -> Dict[str, Any]:
         """
         Exchange an existing long-lived token for a fresh 60-day long-lived access token.
-        GET /oauth/access_token?grant_type=fb_exchange_token&client_id={app_id}&client_secret={app_secret}&fb_exchange_token={token}
+        GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token={token}
         """
         if not settings.META_APP_ID or current_token.startswith("demo_"):
             return {
@@ -92,12 +92,10 @@ class InstagramService:
                 "expires_at": datetime.utcnow() + timedelta(days=60),
             }
 
-        url = "https://graph.facebook.com/v19.0/oauth/access_token"
+        url = "https://graph.instagram.com/refresh_access_token"
         params = {
-            "grant_type": "fb_exchange_token",
-            "client_id": settings.META_APP_ID,
-            "client_secret": settings.META_APP_SECRET,
-            "fb_exchange_token": current_token,
+            "grant_type": "ig_refresh_token",
+            "access_token": current_token,
         }
 
         try:
@@ -105,7 +103,7 @@ class InstagramService:
                 res = await http_client.get(url, params=params, timeout=15.0)
                 if res.status_code != 200:
                     err_body = res.json()
-                    logger.error(f"Meta token refresh failed: {err_body}")
+                    logger.error(f"Instagram token refresh failed: {err_body}")
                     raise AppException(
                         message=f"Token Refresh Error: {err_body.get('error', {}).get('message', 'Failed to refresh token')}",
                         code="META_TOKEN_REFRESH_FAILED",
@@ -169,10 +167,10 @@ class InstagramService:
     ) -> Dict[str, Any]:
         """
         Server-side exchange of an OAuth authorization code for a short-lived
-        user access token.  The META_APP_SECRET is used here and MUST NOT be
-        forwarded to, or obtained from, the browser.
+        Instagram user access token via Instagram Login for Business.
+        POST https://api.instagram.com/oauth/access_token
 
-        Returns: {"access_token": str, "token_type": "bearer"}
+        Returns: {"access_token": str, "user_id": int/str, "permissions": list}
         """
         if not settings.META_APP_ID or not settings.META_APP_SECRET:
             raise AppException(
@@ -181,40 +179,37 @@ class InstagramService:
                 status_code=500,
             )
 
-        url = "https://graph.facebook.com/v19.0/oauth/access_token"
-        params = {
+        url = "https://api.instagram.com/oauth/access_token"
+        form_data = {
             "client_id": settings.META_APP_ID,
-            "redirect_uri": redirect_uri,
             "client_secret": settings.META_APP_SECRET,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
             "code": code,
         }
 
         try:
             async with httpx.AsyncClient() as http_client:
-                res = await http_client.get(url, params=params, timeout=15.0)
+                res = await http_client.post(url, data=form_data, timeout=15.0)
                 data = res.json()
-                if res.status_code != 200 or "error" in data:
-                    err = data.get("error", {})
-                    # Log only the error code/message, never the code or secret
+                if res.status_code != 200 or "error" in data or "error_type" in data:
+                    err_msg = data.get("error_message") or data.get("error", {}).get("message") or "Code exchange failed"
+                    err_type = data.get("error_type") or data.get("error", {}).get("type")
                     logger.error(
-                        f"Meta code exchange failed: "
-                        f"type={err.get('type')} message={err.get('message')}"
+                        f"Instagram code exchange failed: type={err_type} message={err_msg}"
                     )
                     raise AppException(
-                        message=(
-                            "Instagram authorization failed. "
-                            "Please try connecting again."
-                        ),
+                        message="Instagram authorization failed. Please try connecting again.",
                         code="META_CODE_EXCHANGE_FAILED",
                         status_code=400,
                     )
-                return data  # {"access_token": ..., "token_type": "bearer"}
+                return data  # {"access_token": ..., "user_id": ...}
         except AppException:
             raise
         except Exception as exc:
-            logger.error(f"Meta code exchange network error: {type(exc).__name__}")
+            logger.error(f"Instagram code exchange network error: {type(exc).__name__}")
             raise AppException(
-                message="Could not reach Meta servers. Please try again.",
+                message="Could not reach Instagram authorization servers. Please try again.",
                 code="META_NETWORK_ERROR",
                 status_code=502,
             )
@@ -223,8 +218,9 @@ class InstagramService:
         self, short_lived_token: str
     ) -> Dict[str, Any]:
         """
-        Upgrade a short-lived user token to a long-lived (~60 day) token.
-        Returns: {"access_token": str, "expires_in": int}
+        Upgrade a short-lived user token to a long-lived (~60 day) Instagram token.
+        GET https://graph.instagram.com/access_token?grant_type=ig_exchange_token
+        Returns: {"access_token": str, "token_type": "bearer", "expires_in": int}
         """
         if not settings.META_APP_ID or not settings.META_APP_SECRET:
             raise AppException(
@@ -233,12 +229,11 @@ class InstagramService:
                 status_code=500,
             )
 
-        url = "https://graph.facebook.com/v19.0/oauth/access_token"
+        url = "https://graph.instagram.com/access_token"
         params = {
-            "grant_type": "fb_exchange_token",
-            "client_id": settings.META_APP_ID,
+            "grant_type": "ig_exchange_token",
             "client_secret": settings.META_APP_SECRET,
-            "fb_exchange_token": short_lived_token,
+            "access_token": short_lived_token,
         }
 
         try:
@@ -248,7 +243,7 @@ class InstagramService:
                 if res.status_code != 200 or "error" in data:
                     err = data.get("error", {})
                     logger.error(
-                        f"Meta long-lived token exchange failed: "
+                        f"Instagram long-lived token exchange failed: "
                         f"type={err.get('type')} message={err.get('message')}"
                     )
                     raise AppException(
@@ -260,69 +255,34 @@ class InstagramService:
         except AppException:
             raise
         except Exception as exc:
-            logger.error(f"Meta long-lived token exchange network error: {type(exc).__name__}")
+            logger.error(f"Instagram long-lived token exchange network error: {type(exc).__name__}")
             raise AppException(
-                message="Could not reach Meta servers. Please try again.",
+                message="Could not reach Instagram servers. Please try again.",
                 code="META_NETWORK_ERROR",
                 status_code=502,
             )
 
     async def get_ig_user_info(self, access_token: str) -> Dict[str, Any]:
         """
-        Retrieve the Instagram Business Account linked to the given user access token.
+        Retrieve the Instagram Business Account profile directly using Instagram Login access token.
+        GET https://graph.instagram.com/me?fields=id,username,name,account_type,profile_picture_url,followers_count,follows_count,media_count,biography
 
-        Flow:
-          1. GET /me?fields=id,name — get the Meta user
-          2. GET /me/accounts — get Facebook Pages the user manages
-          3. For each Page, GET /{page-id}?fields=instagram_business_account — find IG account
-          4. GET /{ig-id}?fields=username,name,biography,followers_count,
-                                     follows_count,media_count,profile_picture_url,website
-
-        Returns a dict of Instagram Business account info.
-        Raises AppException if no Instagram Business Account is found.
+        Returns a dict of Instagram Business account info:
+          - id: str
+          - username: str
+          - name: str
+          - profile_picture_url: str
+          - followers_count: int
+          - follows_count: int
+          - media_count: int
         """
         try:
             async with httpx.AsyncClient() as http_client:
-                # Step 1: Facebook Pages the user admins
-                pages_res = await http_client.get(
-                    "https://graph.facebook.com/v19.0/me/accounts",
-                    params={"access_token": access_token, "fields": "id,name,instagram_business_account"},
-                    timeout=15.0,
-                )
-                pages_data = pages_res.json()
-                if pages_res.status_code != 200 or "error" in pages_data:
-                    logger.error(
-                        f"Meta /me/accounts failed: {pages_data.get('error', {}).get('message')}"
-                    )
-                    raise AppException(
-                        message="Could not retrieve Facebook Pages for this account. "
-                                "Ensure you have admin access to a Facebook Page connected to an Instagram Business Account.",
-                        code="META_PAGES_FETCH_FAILED",
-                        status_code=400,
-                    )
-
-                # Step 2: Find a page with an IG business account
-                ig_account_id = None
-                for page in pages_data.get("data", []):
-                    ig_info = page.get("instagram_business_account")
-                    if ig_info and ig_info.get("id"):
-                        ig_account_id = ig_info["id"]
-                        break
-
-                if not ig_account_id:
-                    raise AppException(
-                        message="No Instagram Business Account found linked to your Facebook Pages. "
-                                "Please connect your Instagram account to a Facebook Page first.",
-                        code="META_NO_IG_BUSINESS_ACCOUNT",
-                        status_code=400,
-                    )
-
-                # Step 3: Fetch IG account details
+                # Fetch profile details directly from Instagram Graph API
                 ig_res = await http_client.get(
-                    f"https://graph.facebook.com/v19.0/{ig_account_id}",
+                    "https://graph.instagram.com/me",
                     params={
-                        "fields": "id,username,name,biography,followers_count,follows_count,"
-                                  "media_count,profile_picture_url,website",
+                        "fields": "id,username,name,account_type,profile_picture_url,followers_count,follows_count,media_count,biography",
                         "access_token": access_token,
                     },
                     timeout=15.0,
@@ -330,7 +290,7 @@ class InstagramService:
                 ig_data = ig_res.json()
                 if ig_res.status_code != 200 or "error" in ig_data:
                     logger.error(
-                        f"Meta IG account fetch failed: {ig_data.get('error', {}).get('message')}"
+                        f"Instagram profile fetch failed: {ig_data.get('error', {}).get('message')}"
                     )
                     raise AppException(
                         message="Could not retrieve Instagram Business Account details.",
@@ -338,14 +298,14 @@ class InstagramService:
                         status_code=400,
                     )
 
-                return ig_data  # {id, username, name, followers_count, ...}
+                return ig_data
 
         except AppException:
             raise
         except Exception as exc:
             logger.error(f"get_ig_user_info network error: {type(exc).__name__}")
             raise AppException(
-                message="Could not reach Meta servers. Please try again.",
+                message="Could not reach Instagram servers. Please try again.",
                 code="META_NETWORK_ERROR",
                 status_code=502,
             )

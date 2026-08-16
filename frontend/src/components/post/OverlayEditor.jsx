@@ -99,22 +99,36 @@ export default function OverlayEditor({ onNextStep }) {
           />
         </div>
 
-        {/* Apply Button */}
-        <button
-          onClick={() => handleApplyOverlay(false)}
-          disabled={isGenerating}
-          className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-stone-950 font-extrabold rounded-xl shadow-lg transition flex items-center justify-center space-x-2"
-        >
-          {isGenerating ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Sparkles className="w-5 h-5" />
-          )}
-          <span>{isGenerating ? 'Analyzing & Designing...' : 'Apply Smart Overlay ✨'}</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setOverlayDesign(null);
+              onNextStep();
+            }}
+            className="w-full sm:w-1/2 py-3.5 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold rounded-xl transition flex items-center justify-center space-x-2 text-sm"
+          >
+            <span>Skip / No Text Overlay ➔</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleApplyOverlay(false)}
+            disabled={isGenerating || !overlayText.trim()}
+            className="w-full sm:w-1/2 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 text-stone-950 font-extrabold rounded-xl shadow-lg transition flex items-center justify-center space-x-2 text-sm"
+          >
+            {isGenerating ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Sparkles className="w-5 h-5" />
+            )}
+            <span>{isGenerating ? 'Designing...' : 'Apply Smart Overlay ✨'}</span>
+          </button>
+        </div>
 
         <p className="text-[11px] text-stone-500 text-center font-medium">
-          Our system automatically chooses the best design based on your photo. Zero manual setup required.
+          Optional: Type text above to generate a smart layout, or click &quot;Skip&quot; to keep your clean photo.
         </p>
       </div>
 
