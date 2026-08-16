@@ -146,6 +146,7 @@ def _build_meta_auth_url(state: str) -> str:
         "scope": ",".join(_REQUIRED_SCOPES),
         "state": state,
         "force_reauth": "true",
+        "enable_fb_login": "0",
     }
     return "https://www.instagram.com/oauth/authorize?" + urllib.parse.urlencode(params)
 
