@@ -26,7 +26,9 @@ from app.services.cloudinary_service import cloudinary_service
 from app.services.caption_ai import caption_ai_service
 from app.services.image_design_service import image_design_service
 from app.utils.image_resizer import resize_and_pad_image
+from datetime import datetime, timedelta, timezone
 from app.tasks.process_image import process_image_task, _async_process_image
+from app.tasks.publish_post import publish_due_posts_task, _async_publish_due_posts
 
 router = APIRouter(prefix="/posts", tags=["Posts Lifecycle"])
 
@@ -461,6 +463,17 @@ async def schedule_post(
     post.status = PostStatusEnum.SCHEDULED
     await db.commit()
     await db.refresh(post)
+
+    # If scheduled for now (or within the next 60 seconds), immediately trigger publishing in background
+    now_utc = datetime.utcnow()
+    scheduled_time = post.scheduled_at.replace(tzinfo=None) if post.scheduled_at.tzinfo else post.scheduled_at
+    if scheduled_time <= now_utc + timedelta(seconds=60):
+        logger.info(f"Post {post.id} scheduled for immediate execution. Dispatching publish task now.")
+        await safe_dispatch_task(
+            publish_due_posts_task,
+            _async_publish_due_posts,
+        )
+
     return post
 
 

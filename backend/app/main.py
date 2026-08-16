@@ -77,14 +77,44 @@ app.add_middleware(
 app.include_router(api_v1_router, prefix="/api")
 
 
+import asyncio
+from app.tasks.publish_post import _async_publish_due_posts
+
+
+async def _periodic_due_posts_scheduler():
+    """
+    Lightweight in-process background runner for single-container deployments.
+    Polls every 30 seconds and safely processes due posts using atomic FOR UPDATE SKIP LOCKED.
+    """
+    logger.info("Starting in-process scheduled posts worker loop (30s interval)")
+    while True:
+        try:
+            claimed_count = await _async_publish_due_posts()
+            if claimed_count > 0:
+                logger.info(f"In-process scheduler successfully published {claimed_count} due post(s)")
+        except asyncio.CancelledError:
+            logger.info("In-process scheduled posts worker loop stopped")
+            break
+        except Exception as e:
+            logger.error(f"Error in periodic post scheduler loop: {e}")
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            break
+
+
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"Starting {settings.PROJECT_NAME} in [{settings.ENVIRONMENT}] mode")
+    # Start in-process background post scheduler loop
+    app.state.scheduler_task = asyncio.create_task(_periodic_due_posts_scheduler())
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
+    if hasattr(app.state, "scheduler_task") and app.state.scheduler_task:
+        app.state.scheduler_task.cancel()
 
 
 @app.get("/")

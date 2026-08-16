@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 from typing import Dict, Any
 from datetime import datetime, timedelta
@@ -18,9 +19,10 @@ class InstagramService:
         caption: str,
     ) -> str:
         """
-        Execute 2-step Meta Instagram Graph API container media publishing:
-        Step 1: POST /{ig-user-id}/media?image_url={url}&caption={caption}
-        Step 2: POST /{ig-user-id}/media_publish?creation_id={container_id}
+        Execute 2-step Meta Instagram Graph API container media publishing via Instagram Login for Business:
+        Step 1: POST https://graph.instagram.com/v21.0/{ig-user-id}/media?image_url={url}&caption={caption}
+        Step 2: Poll GET https://graph.instagram.com/v21.0/{creation_id}?fields=status_code
+        Step 3: POST https://graph.instagram.com/v21.0/{ig-user-id}/media_publish?creation_id={container_id}
         """
         if not instagram_user_id or not access_token:
             raise AppException(message="Missing Instagram Business credentials", code="META_AUTH_ERROR")
@@ -30,56 +32,134 @@ class InstagramService:
             logger.info(f"[Test Mode] Simulating Meta Instagram publish for IG User {instagram_user_id}")
             return f"ig_media_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
 
+        api_version = "v21.0"
+        base_url = f"https://graph.instagram.com/{api_version}"
+
         try:
             async with httpx.AsyncClient() as http_client:
                 # Step 1: Create Media Container
-                container_url = f"https://graph.facebook.com/v19.0/{instagram_user_id}/media"
+                container_url = f"{base_url}/{instagram_user_id}/media"
                 container_params = {
                     "image_url": image_url,
                     "caption": caption,
                     "access_token": access_token,
                 }
 
-                logger.info(f"Creating Meta Instagram container for IG User {instagram_user_id}")
+                logger.info(f"Creating Instagram media container: endpoint={container_url} ig_user_id={instagram_user_id}")
                 c_res = await http_client.post(container_url, data=container_params, timeout=30.0)
 
                 if c_res.status_code != 200:
                     err_body = c_res.json()
-                    logger.error(f"Meta container creation failed: {err_body}")
+                    err_msg = err_body.get("error", {}).get("message", "Unknown error")
+                    err_type = err_body.get("error", {}).get("type", "OAuthException")
+                    err_code = err_body.get("error", {}).get("code", c_res.status_code)
+                    logger.error(
+                        f"Instagram container creation failed: status={c_res.status_code} "
+                        f"code={err_code} type={err_type} message={err_msg}"
+                    )
                     raise AppException(
-                        message=f"Instagram Container Error: {err_body.get('error', {}).get('message', 'Unknown error')}",
+                        message=f"Instagram Container Error: {err_msg}",
                         code="META_CONTAINER_FAILED",
                     )
 
-                container_id = c_res.json().get("id")
+                c_json = c_res.json()
+                container_id = c_json.get("id")
                 if not container_id:
+                    logger.error(f"Instagram returned empty container ID: {c_json}")
                     raise AppException(message="Meta returned empty container ID", code="META_INVALID_RESPONSE")
 
-                # Step 2: Publish Media Container
-                publish_url = f"https://graph.facebook.com/v19.0/{instagram_user_id}/media_publish"
+                logger.info(f"Instagram container created successfully: container_id={container_id}")
+
+                # Step 2: Poll Container Status until FINISHED
+                # Meta recommends polling for status_code == 'FINISHED'
+                status_url = f"{base_url}/{container_id}"
+                max_polls = 30  # Poll up to 30 times with 5s delay = 2.5 minutes max
+                container_ready = False
+
+                for attempt in range(1, max_polls + 1):
+                    s_res = await http_client.get(
+                        status_url,
+                        params={"fields": "status_code,status", "access_token": access_token},
+                        timeout=15.0,
+                    )
+                    if s_res.status_code == 200:
+                        s_data = s_res.json()
+                        status_code = s_data.get("status_code", "").upper()
+                        logger.info(
+                            f"Container status check: attempt={attempt}/{max_polls} "
+                            f"container_id={container_id} status_code={status_code}"
+                        )
+
+                        if status_code == "FINISHED":
+                            container_ready = True
+                            break
+                        elif status_code in ("ERROR", "EXPIRED"):
+                            err_detail = s_data.get("status", "Processing error")
+                            logger.error(
+                                f"Instagram container failed status: container_id={container_id} "
+                                f"status_code={status_code} detail={err_detail}"
+                            )
+                            raise AppException(
+                                message=f"Instagram media processing failed: {err_detail}",
+                                code="META_CONTAINER_PROCESSING_FAILED",
+                            )
+                    else:
+                        logger.warning(
+                            f"Container status check returned HTTP {s_res.status_code} on attempt {attempt}"
+                        )
+
+                    # Wait 5 seconds before next poll
+                    await asyncio.sleep(5.0)
+
+                if not container_ready:
+                    # If single image, proceed with publish attempt as single images may not require long processing
+                    logger.warning(
+                        f"Container status check timed out for container_id={container_id}. Attempting media_publish..."
+                    )
+
+                # Step 3: Publish Media Container
+                publish_url = f"{base_url}/{instagram_user_id}/media_publish"
                 publish_params = {
                     "creation_id": container_id,
                     "access_token": access_token,
                 }
 
-                logger.info(f"Publishing Meta container {container_id}")
+                logger.info(f"Publishing Instagram container: endpoint={publish_url} container_id={container_id}")
                 p_res = await http_client.post(publish_url, data=publish_params, timeout=30.0)
 
                 if p_res.status_code != 200:
                     err_body = p_res.json()
-                    logger.error(f"Meta media_publish failed: {err_body}")
+                    err_msg = err_body.get("error", {}).get("message", "Unknown error")
+                    err_type = err_body.get("error", {}).get("type", "OAuthException")
+                    err_code = err_body.get("error", {}).get("code", p_res.status_code)
+                    logger.error(
+                        f"Instagram media_publish failed: status={p_res.status_code} "
+                        f"code={err_code} type={err_type} message={err_msg}"
+                    )
                     raise AppException(
-                        message=f"Instagram Publish Error: {err_body.get('error', {}).get('message', 'Unknown error')}",
+                        message=f"Instagram Publish Error: {err_msg}",
                         code="META_PUBLISH_FAILED",
                     )
 
-                instagram_media_id = p_res.json().get("id")
+                p_json = p_res.json()
+                instagram_media_id = p_json.get("id")
+                if not instagram_media_id:
+                    logger.error(f"Instagram media_publish returned empty media ID: {p_json}")
+                    raise AppException(message="Meta returned empty media ID", code="META_INVALID_RESPONSE")
+
+                logger.info(
+                    f"Instagram post successfully published: instagram_media_id={instagram_media_id} "
+                    f"container_id={container_id} ig_user_id={instagram_user_id}"
+                )
                 return str(instagram_media_id)
         except AppException:
             raise
         except Exception as e:
-            logger.warning(f"Meta API network error: {e}. Falling back to test media ID.")
-            return f"ig_media_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+            logger.error(f"Instagram publishing unexpected error: {type(e).__name__} - {str(e)}")
+            raise AppException(
+                message=f"Instagram publishing network error: {str(e)}",
+                code="META_PUBLISH_NETWORK_ERROR",
+            )
 
     async def refresh_long_lived_token(self, current_token: str) -> Dict[str, Any]:
         """
@@ -131,12 +211,12 @@ class InstagramService:
     ) -> Dict[str, Any]:
         """
         Fetch engagement insights (likes, reach, comments, saves) for a published post.
-        GET /{instagram_media_id}/insights?metric=reach,saved,engagement&access_token={token}
+        GET https://graph.instagram.com/v21.0/{instagram_media_id}/insights?metric=reach,saved,engagement&access_token={token}
         """
         if instagram_media_id.startswith("ig_media_") or access_token.startswith("demo_"):
             return {"likes": 142, "reach": 1280, "saves": 38, "comments": 15}
 
-        url = f"https://graph.facebook.com/v19.0/{instagram_media_id}/insights"
+        url = f"https://graph.instagram.com/v21.0/{instagram_media_id}/insights"
         params = {
             "metric": "reach,saved,engagement",
             "access_token": access_token,
