@@ -189,7 +189,7 @@ export default function Settings() {
             <div>
               <h3 className="font-bold text-white text-base">Brand Voice Preference</h3>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Select the tone for AI generated captions and social media copy.
+                Select the tone for generated captions and social media copy.
               </p>
             </div>
           </div>
@@ -316,55 +316,55 @@ export default function Settings() {
                   {ig.connected_at ? new Date(ig.connected_at).toLocaleDateString() : 'Active'}
                 </span>
               </div>
-              <div>
-                Token Status:{' '}
-                <span className={ig.expires_at && new Date(ig.expires_at) <= new Date() ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>
-                  {formatExpiry(ig.expires_at)}
-                </span>
-              </div>
+              <button
+                onClick={handleDisconnectMeta}
+                disabled={isDisconnecting}
+                className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-semibold transition"
+              >
+                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+              </button>
             </div>
           </div>
         ) : (
-          /* Disconnected State Card */
-          <div className="p-6 bg-[#0f0f0f]/80 rounded-2xl border border-white/5 text-center space-y-4 shadow-inner">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <div className="p-6 bg-[#0f0f0f] border border-white/10 rounded-2xl text-center space-y-4">
+            <div className="p-3 bg-amber-500/10 text-amber-400 rounded-full w-12 h-12 mx-auto flex items-center justify-center border border-amber-500/20">
               <Instagram className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-base">Instagram Business Account Not Connected</h4>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto mt-1">
-                Connect your Meta Instagram Business account to publish, schedule, and track engagement directly from your dashboard.
+              <h4 className="font-semibold text-white text-sm">No Instagram Account Connected</h4>
+              <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
+                Connect your Instagram Professional Account via Meta OAuth to enable direct publishing and automated scheduling.
               </p>
             </div>
             <button
-              onClick={handleConnectIg}
+              onClick={handleConnectMeta}
               disabled={isConnecting}
-              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] text-zinc-950 font-bold text-xs rounded-xl shadow-lg transition-all duration-300 inline-flex items-center space-x-2 disabled:opacity-50"
+              className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-zinc-950 font-bold text-xs rounded-xl shadow-lg transition flex items-center space-x-2 mx-auto"
             >
-              {isConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Instagram className="w-4 h-4" />}
-              <span>{isConnecting ? 'Connecting Meta Account...' : 'Connect Instagram Business Account'}</span>
+              {isConnecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Instagram className="w-4 h-4" />}
+              <span>{isConnecting ? 'Connecting...' : 'Connect Instagram Professional'}</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Tenant Plan & Quota Progress Bars */}
-      <div className="p-6 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-white/[0.06] space-y-5 shadow-xl">
+      {/* Quota & Usage Section (Amber Theme) */}
+      <div className="p-6 sm:p-8 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-white/[0.06] space-y-6 shadow-xl">
         <div className="flex items-center space-x-3">
           <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-            <HardDrive className="w-5 h-5" />
+            <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-base">Tenant Plan & Usage Quotas</h3>
-            <p className="text-xs text-zinc-400 mt-0.5">Track your monthly usage limits and active quota metrics.</p>
+            <h3 className="font-bold text-white text-base">Plan Quotas &amp; Usage</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Your monthly consumption and operational limits.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-          {/* Quota Item 1: Free Edits */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Quota Item 1: Photo Edits */}
           <div className="p-4 bg-[#0f0f0f]/80 rounded-xl border border-white/5 space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="font-semibold text-zinc-300">Free Photo Edits</span>
+              <span className="font-semibold text-zinc-300">Photo Enhancements</span>
               <span className="font-bold text-amber-400">
                 {quota.free_edits_used}/{quota.max_edits}
               </span>
@@ -377,10 +377,10 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Quota Item 2: AI Generations */}
+          {/* Quota Item 2: Strategy Generations */}
           <div className="p-4 bg-[#0f0f0f]/80 rounded-xl border border-white/5 space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="font-semibold text-zinc-300">AI Strategy Generations</span>
+              <span className="font-semibold text-zinc-300">Strategy Generations</span>
               <span className="font-bold text-amber-400">
                 {quota.ai_generations_used}/{quota.max_generations}
               </span>

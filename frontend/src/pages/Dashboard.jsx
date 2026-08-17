@@ -34,7 +34,6 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
 
   const handleGenerateStrategy = async () => {
     setIsGeneratingStrategy(true);
-    setRecommendations([]); // Clear/reset existing strategy cards first to avoid duplication
     try {
       await menuApi.generateStrategy();
       // Wait briefly for background task execution before replacing recommendations
@@ -54,7 +53,7 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto pb-8">
-      {/* 1. Top Section - AI Content Strategy Recommendations */}
+      {/* 1. Top Section - Content Strategy Recommendations */}
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
@@ -65,7 +64,7 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
               </div>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">AI Content Strategy Recommendations</h3>
+              <h3 className="text-xl font-bold text-white tracking-tight">Content Strategy Recommendations</h3>
               <p className="text-xs text-zinc-400 mt-0.5">Smart posting suggestions tailored to your restaurant menu and activity.</p>
             </div>
           </div>
@@ -83,16 +82,33 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
         </div>
 
         {isGeneratingStrategy ? (
-          <div className="p-10 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-white/[0.06] text-center space-y-3 shadow-xl">
-            <Loader2 className="w-8 h-8 text-amber-400 animate-spin mx-auto" />
-            <h4 className="font-semibold text-white text-base">Analyzing Menu & Post History</h4>
-            <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-              Selecting the best dishes and promotional angles for your target audience...
-            </p>
+          /* Exactly 3 Skeleton Cards matching recommendation card layout */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((n) => (
+              <div
+                key={n}
+                className="p-6 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-amber-500/20 animate-pulse flex flex-col justify-between h-[280px]"
+              >
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="h-5 w-24 bg-amber-500/20 rounded-full" />
+                  </div>
+                  <div className="h-6 w-3/4 bg-white/10 rounded-lg" />
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-zinc-700 rounded-full" />
+                    <div className="h-4 w-1/2 bg-zinc-800 rounded" />
+                  </div>
+                  <div className="h-12 w-full bg-amber-500/5 border-l-2 border-amber-500/40 rounded-r-xl" />
+                </div>
+                <div className="pt-6">
+                  <div className="h-10 w-full bg-white/5 rounded-xl" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : recommendations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendations.map((rec) => (
+            {recommendations.slice(0, 3).map((rec) => (
               <div
                 key={rec.id}
                 className="p-6 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-white/[0.06] hover:border-amber-500/40 hover:scale-[1.01] hover:shadow-[0_0_25px_-5px_rgba(245,158,11,0.2)] transition-all duration-300 flex flex-col justify-between group"
@@ -138,7 +154,7 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
             <div>
               <h4 className="font-semibold text-white text-base">No active recommendations right now</h4>
               <p className="text-xs text-zinc-400 max-w-md mx-auto mt-1">
-                Your menu is active. Click Refresh Strategy to generate new AI recommendations.
+                Your menu is active. Click Refresh Strategy to generate new recommendations.
               </p>
             </div>
             <button
@@ -155,7 +171,7 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
             <div>
               <h2 className="text-2xl font-bold mb-2 tracking-tight">Turn Raw Photos into Instagram Posts ✨</h2>
               <p className="text-amber-100/90 text-xs sm:text-sm max-w-xl leading-relaxed">
-                Upload quick phone photos of your food. Gemini AI enhances lighting, generates on-brand captions, and auto-posts to Instagram.
+                Upload quick phone photos of your food. Enhance lighting, generate on-brand captions, and auto-post to Instagram.
               </p>
             </div>
             <button
@@ -195,14 +211,14 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
           </div>
         </div>
 
-        {/* Total AI Enhanced */}
+        {/* Total Enhanced Posts */}
         <div className="p-6 rounded-2xl bg-[#1a1a1a]/80 backdrop-blur-md border border-white/[0.06] border-t-2 border-t-sky-500 hover:border-sky-500/30 hover:shadow-[0_0_20px_-5px_rgba(56,189,248,0.15)] transition-all duration-300 flex items-center space-x-4">
           <div className="p-3 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20 shrink-0">
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
             <p className="text-2xl font-bold text-white">{posts.length}</p>
-            <p className="text-xs font-semibold text-zinc-300">Total AI Enhanced</p>
+            <p className="text-xs font-semibold text-zinc-300">Total Enhanced Posts</p>
             <p className="text-[11px] text-zinc-400 mt-0.5">Images processed</p>
           </div>
         </div>
@@ -279,3 +295,4 @@ export default function Dashboard({ onStartCreate, onViewHistory }) {
     </div>
   );
 }
+

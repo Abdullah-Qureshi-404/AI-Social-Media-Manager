@@ -38,7 +38,7 @@ export default function Header({ onToggleSidebar }) {
         </div>
 
         <div>
-          <h1 className="font-semibold text-base sm:text-lg text-white leading-none tracking-tight">AI Social Media Manager</h1>
+          <h1 className="font-semibold text-base sm:text-lg text-white leading-none tracking-tight">Social Media Manager</h1>
           <span className="text-xs text-amber-500 font-medium">{restaurantName}</span>
         </div>
       </div>

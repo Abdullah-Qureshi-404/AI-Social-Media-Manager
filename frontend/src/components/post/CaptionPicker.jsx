@@ -15,27 +15,33 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
     setCaptionSkipped,
     hashtagsSkipped,
     setHashtagsSkipped,
+    recommendedCaptionId,
+    setRecommendations,
   } = usePostFlowStore();
 
   const [selectedIdx, setSelectedIdx] = useState(null);
 
   const defaultOptions = [
     {
+      id: 1,
       tone: 'Professional',
       desc: 'Creates a polished business caption suitable for brands.',
       text: 'Artisanal daily specials handcrafted with premium ingredients. Visit us today for an uncompromised food experience.',
     },
     {
+      id: 2,
       tone: 'Friendly',
       desc: 'Creates a warm conversational caption.',
       text: 'Fresh out of the kitchen! 🥐 Treat yourself to warm, delicious bites and your favorite coffee today! ☕✨',
     },
     {
+      id: 3,
       tone: 'Promotional',
       desc: 'Highlights offers and encourages customers to visit.',
       text: 'Limited time daily special! Order now and get a complimentary specialty espresso with any pastry order. Tag a friend! 👇',
     },
     {
+      id: 4,
       tone: 'Storytelling',
       desc: 'Creates an emotional story around the product.',
       text: 'From early morning preparations to the golden final bake. Taste the dedication behind every recipe we create.',
@@ -63,6 +69,11 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
 
   const handleGenerate = async () => {
     if (isLimitReached || isGenerating) return;
+    // Clear any previous recommendations when new generation request starts
+    setRecommendations(null, null);
+    setSelectedIdx(null);
+    setSelectedCaption('');
+    
     const res = await onGenerateCaptions(captionInstruction);
     if (res && res.captions && res.captions.length > 0) {
       setOptions(res.captions);
@@ -70,10 +81,11 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
       setHashtags(returnedTags);
       setSelectedHashtags(returnedTags);
       setHashtagsSkipped(false);
-      setSelectedIdx(0);
-      const firstText = res.captions[0]?.text || '';
-      setSelectedCaption(firstText);
-      setCaptionSkipped(false);
+      
+      // Store recommendation metadata without auto-selecting
+      if (res.recommended_caption_id || res.recommended_preset) {
+        setRecommendations(res.recommended_preset || null, res.recommended_caption_id || null);
+      }
     }
   };
 
@@ -134,7 +146,7 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
           disabled={isLimitReached || isGenerating}
           className="w-full px-4 py-3 bg-[#0f0f0f] border border-white/10 rounded-xl text-white text-xs placeholder-zinc-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none disabled:opacity-50 transition"
         />
-        <p className="text-[11px] text-zinc-400">Leave blank to generate a recommended caption.</p>
+        <p className="text-[11px] text-zinc-400">Leave blank to generate suggested captions.</p>
       </div>
 
       {/* STEP B — Generate Button */}
@@ -179,6 +191,12 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
 
         {options.map((opt, idx) => {
           const isSelected = selectedIdx === idx && !captionSkipped;
+          const optionId = opt.id !== undefined && opt.id !== null ? opt.id : idx + 1;
+          const isRecommended =
+            recommendedCaptionId !== null &&
+            recommendedCaptionId !== undefined &&
+            recommendedCaptionId === optionId;
+
           return (
             <div
               key={idx}
@@ -186,6 +204,8 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
               className={`p-4 rounded-xl cursor-pointer border transition-all duration-200 ${
                 isSelected
                   ? 'border-l-4 border-amber-500 bg-amber-500/10 text-white shadow-[0_0_20px_rgba(245,158,11,0.15)] border-white/10'
+                  : isRecommended
+                  ? 'bg-amber-500/5 border-amber-500/40 text-zinc-200 hover:border-amber-500/60'
                   : 'bg-[#1a1a1a]/80 border-white/[0.06] text-zinc-300 hover:border-amber-500/30'
               }`}
             >
@@ -193,12 +213,19 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                   {opt.tone || opt.style || `Option ${idx + 1}`}
                 </span>
-                {isSelected && (
-                  <div className="flex items-center space-x-1 text-xs text-amber-400 font-bold">
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Selected</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  {isRecommended && (
+                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold rounded-full shadow-sm">
+                      ✦ Recommended
+                    </span>
+                  )}
+                  {isSelected && (
+                    <div className="flex items-center space-x-1 text-xs text-amber-400 font-bold">
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Selected</span>
+                    </div>
+                  )}
+                </div>
               </div>
               {opt.desc && <p className="text-[11px] text-zinc-400 mb-2">{opt.desc}</p>}
               <p className="text-sm font-normal text-zinc-100 leading-relaxed">{opt.text}</p>
@@ -206,6 +233,7 @@ export default function CaptionPicker({ onGenerateCaptions, onNextStep, isGenera
           );
         })}
       </div>
+
 
       {/* STEP D — Hashtag Selection & Skip Button */}
       <div className="pt-2 space-y-3">

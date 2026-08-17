@@ -98,7 +98,7 @@ export default function MenuManager() {
       <div>
         <h2 className="text-2xl font-bold text-white tracking-tight">Menu Intelligence</h2>
         <p className="text-zinc-400 text-xs mt-1">
-          Upload your menu to let AI generate personalized post strategies based on what you actually sell.
+          Upload your menu to generate personalized post strategies based on what you actually sell.
         </p>
       </div>
 
@@ -125,12 +125,12 @@ export default function MenuManager() {
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Take a photo of your physical menu. Gemini AI will automatically extract all items, categories, and prices.
+              Take a photo of your physical menu to automatically extract all items, categories, and prices.
             </p>
 
             <label className="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed border-white/10 hover:border-amber-500/60 rounded-2xl cursor-pointer transition-all duration-300 bg-[#0f0f0f]/60 hover:bg-[#0f0f0f] group">
               <span className="font-semibold text-zinc-300 text-xs mb-3 group-hover:text-white transition">
-                {isLoading ? 'Processing with AI...' : 'Select Menu Photo (JPG, PNG, WEBP)'}
+                {isLoading ? 'Processing menu...' : 'Select Menu Photo (JPG, PNG, WEBP)'}
               </span>
               <span className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold rounded-xl text-xs shadow-lg shadow-amber-500/15 transition flex items-center space-x-2">
                 <Upload className="w-4 h-4" />
@@ -154,7 +154,7 @@ export default function MenuManager() {
               </div>
 
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Paste the link to your online menu or delivery page. Gemini AI will crawl and extract the items.
+                Paste the link to your online menu or delivery page to crawl and extract the items.
               </p>
             </div>
 
@@ -189,7 +189,7 @@ export default function MenuManager() {
                 <span>Review Extracted Menu</span>
               </h3>
               <p className="text-xs text-zinc-400 mt-1">
-                Please review and correct any AI mistakes before saving. This will become your Active Menu.
+                Please review and correct any details before saving. This will become your Active Menu.
               </p>
             </div>
             <button

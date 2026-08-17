@@ -33,7 +33,7 @@ export default function ImageUploader({ context }) {
 
       <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Upload Raw Phone Photo</h2>
       <p className="text-xs sm:text-sm text-zinc-400 mb-8 leading-relaxed max-w-md mx-auto">
-        Drag & drop any food or pastry photo from your phone. Our AI will fix lighting, clean backgrounds, and style it automatically.
+        Drag & drop any food or pastry photo from your phone to enhance lighting, clean backgrounds, and style it automatically.
       </p>
 
       <label className="inline-flex items-center space-x-2.5 px-7 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] text-zinc-950 font-bold rounded-xl text-xs sm:text-sm cursor-pointer shadow-lg shadow-amber-500/15 transition-all duration-300">

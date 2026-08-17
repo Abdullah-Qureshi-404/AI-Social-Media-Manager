@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Sun, Coffee, Moon, Sparkles, SlidersHorizontal, Edit3, Wind, Camera, Loader2, Check } from 'lucide-react';
+import { Sun, Coffee, Moon, Sparkles, SlidersHorizontal, Edit3, Wind, Camera, Loader2, Check, ArrowRight } from 'lucide-react';
 import { usePostFlowStore } from '../../store/postFlowStore';
 
 export default function PresetSelector({ onTriggerEdit, editCount, isLoading = false, isEnhancing = false }) {
-  const { selectedPreset, setSelectedPreset, customPrompt, setCustomPrompt } = usePostFlowStore();
+  const { selectedPreset, setSelectedPreset, customPrompt, setCustomPrompt, recommendedPreset, setStep } = usePostFlowStore();
   const [mode, setMode] = useState('preset'); // 'preset' | 'custom'
 
   const presets = [
@@ -113,6 +113,8 @@ export default function PresetSelector({ onTriggerEdit, editCount, isLoading = f
           {presets.map((preset) => {
             const Icon = preset.icon;
             const isSelected = selectedPreset === preset.id;
+            const isRecommended = recommendedPreset === preset.id;
+
             return (
               <div
                 key={preset.id}
@@ -122,16 +124,25 @@ export default function PresetSelector({ onTriggerEdit, editCount, isLoading = f
                 } ${
                   isSelected
                     ? 'bg-amber-500/10 border-amber-500 text-white ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
+                    : isRecommended
+                    ? 'bg-amber-500/5 border-amber-500/50 text-white shadow-[0_0_15px_rgba(245,158,11,0.1)]'
                     : 'bg-[#1a1a1a]/80 border-white/[0.06] text-zinc-300 hover:border-amber-500/40'
                 }`}
               >
-                {/* Top-Right Selected Badge */}
-                {isSelected && (
-                  <span className="absolute top-3 right-3 px-2 py-0.5 bg-amber-500 text-zinc-950 text-[10px] font-bold rounded-full flex items-center space-x-1 shadow-sm">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                    <span>SELECTED</span>
-                  </span>
-                )}
+                {/* Top-Right Badges */}
+                <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+                  {isRecommended && (
+                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold rounded-full flex items-center space-x-0.5 shadow-sm">
+                      <span>✦ Recommended</span>
+                    </span>
+                  )}
+                  {isSelected && (
+                    <span className="px-2 py-0.5 bg-amber-500 text-zinc-950 text-[10px] font-bold rounded-full flex items-center space-x-1 shadow-sm">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                      <span>SELECTED</span>
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center space-x-3 mb-2">
                   <div className={`p-2.5 rounded-xl transition ${isSelected ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/20' : 'bg-zinc-800/80 text-amber-400 border border-white/5'}`}>
@@ -163,26 +174,38 @@ export default function PresetSelector({ onTriggerEdit, editCount, isLoading = f
         </div>
       )}
 
-      <button
-        onClick={handleApply}
-        disabled={isDisabled || (mode === 'custom' && !customPrompt.trim())}
-        className="w-full py-3.5 mt-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 text-xs sm:text-sm"
-      >
-        {isBusy ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Sparkles className="w-4 h-4" />
-        )}
-        <span>
-          {isBusy
-            ? 'Enhancement Processing...'
-            : remainingEdits === 0
-            ? 'Max Edit Limit Reached (3/3)'
-            : mode === 'preset'
-            ? 'Apply Selected Enhancement Style'
-            : 'Apply Custom Enhancement Instruction'}
-        </span>
-      </button>
+      <div className="space-y-2.5 pt-1">
+        <button
+          onClick={handleApply}
+          disabled={isDisabled || (mode === 'custom' && !customPrompt.trim())}
+          className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-bold rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 text-xs sm:text-sm"
+        >
+          {isBusy ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Sparkles className="w-4 h-4" />
+          )}
+          <span>
+            {isBusy
+              ? 'Enhancement Processing...'
+              : remainingEdits === 0
+              ? 'Max Edit Limit Reached (3/3)'
+              : mode === 'preset'
+              ? 'Apply Selected Enhancement Style'
+              : 'Apply Custom Enhancement Instruction'}
+          </span>
+        </button>
+
+        {/* Skip Enhancement Option */}
+        <button
+          type="button"
+          onClick={() => setStep(3)}
+          className="w-full py-2.5 bg-transparent hover:bg-amber-500/5 text-amber-400 text-xs font-semibold rounded-xl border border-amber-500/30 hover:border-amber-500/60 transition flex items-center justify-center space-x-1.5"
+        >
+          <span>Skip &amp; Use Original Photo →</span>
+        </button>
+      </div>
     </div>
   );
 }
+

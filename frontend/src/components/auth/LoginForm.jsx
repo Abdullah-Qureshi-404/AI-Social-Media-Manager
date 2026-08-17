@@ -42,7 +42,7 @@ export default function LoginForm({ onToggleSignup, onToggleForgotPassword, onFo
       <div className="space-y-1">
         <h2 className="text-2xl font-extrabold text-white tracking-tight">Welcome Back</h2>
         <p className="text-xs text-stone-400">
-          Sign in to manage your AI-powered social media posts and automation.
+          Sign in to manage your automated social media posts.
         </p>
       </div>
 

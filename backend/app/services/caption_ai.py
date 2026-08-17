@@ -77,13 +77,15 @@ class CaptionAIService:
             safe_instruction = sanitize_ai_prompt_input(user_instruction, max_length=500)
 
             system_prompt = f"""You are a professional social media caption writer for a restaurant.
-Your task: look at the food item in the image and write engaging Instagram captions.
+Your task: look at the food item in the image, write engaging Instagram captions, and recommend the best visual enhancement preset and caption for this specific photo.
 
 RULES:
 - Generate captions ONLY about what you actually see in the image.
 - Match the brand voice specified below.
 - Do not mention unrelated food items.
 - Generate exactly 12 relevant hashtags (3 food-specific, 3 cafe/bakery, 3 lifestyle, 3 community).
+- Select which caption id (1, 2, or 3) is the strongest match as "recommended_caption_id".
+- Select which enhancement preset best complements the image lighting and mood as "recommended_preset". Allowed values: "golden_hour", "rustic_cafe", "dark_moody", "clean_minimalist", "bright_airy", "studio_commercial".
 - Return ONLY valid JSON — no extra text, no markdown fences.
 
 BRAND VOICE: {brand_voice}
@@ -99,7 +101,9 @@ Return ONLY a JSON object:
     {{"id": 2, "tone": "Professional & Artisanal", "text": "..."}},
     {{"id": 3, "tone": "Engaging Call-to-Action", "text": "..."}}
   ],
-  "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8", "#tag9", "#tag10", "#tag11", "#tag12"]
+  "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5", "#tag6", "#tag7", "#tag8", "#tag9", "#tag10", "#tag11", "#tag12"],
+  "recommended_caption_id": 1,
+  "recommended_preset": "golden_hour"
 }}
 Hashtags must match the actual food in the image.
 Return ONLY the JSON."""
@@ -119,12 +123,31 @@ Return ONLY the JSON."""
                 if "hashtags" in parsed and "suggested_hashtags" not in parsed:
                     parsed["suggested_hashtags"] = parsed["hashtags"]
 
+                allowed_presets = {
+                    "golden_hour",
+                    "rustic_cafe",
+                    "dark_moody",
+                    "clean_minimalist",
+                    "bright_airy",
+                    "studio_commercial",
+                }
+                rec_preset = parsed.get("recommended_preset")
+                if rec_preset not in allowed_presets:
+                    rec_preset = None
+
+                rec_caption_id = parsed.get("recommended_caption_id")
+                if not isinstance(rec_caption_id, int) or rec_caption_id not in [1, 2, 3]:
+                    rec_caption_id = None
+
+                parsed["recommended_preset"] = rec_preset
+                parsed["recommended_caption_id"] = rec_caption_id
+
                 return parsed
             else:
                 return self._get_fallback_captions(user_instruction)
 
         except Exception as e:
-            logger.warning(f"Error in Gemini 3.6 Flash caption generation after retries: {e}. Falling back to default captions.")
+            logger.warning(f"Error in Gemini caption generation after retries: {e}. Falling back to default captions.")
             return self._get_fallback_captions(user_instruction)
 
     def verify_caption_facts(self, caption_text: str, item_name: str, expected_price: Optional[float]) -> str:
@@ -188,7 +211,10 @@ Return ONLY the JSON."""
                 "#foodstagram",
                 "#tasty",
             ],
+            "recommended_caption_id": None,
+            "recommended_preset": None,
         }
 
 
 caption_ai_service = CaptionAIService()
+

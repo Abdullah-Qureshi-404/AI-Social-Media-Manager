@@ -68,7 +68,7 @@ export default function AuthIllustration({ focusedField }) {
           <Coffee className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="font-extrabold text-base text-white leading-tight tracking-tight">AI Social Media Manager</h1>
+          <h1 className="font-extrabold text-base text-white leading-tight tracking-tight">Social Media Manager</h1>
           <p className="text-[11px] text-amber-500 font-semibold tracking-wide">Cafe & Restaurant Automation</p>
         </div>
       </div>

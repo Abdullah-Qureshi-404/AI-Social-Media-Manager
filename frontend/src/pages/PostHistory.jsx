@@ -128,7 +128,7 @@ export default function PostHistory() {
               </span>
             </div>
             <p className="text-xs text-zinc-400 mt-0.5">
-              View, inspect, and manage your AI-generated and scheduled Instagram posts.
+              View, inspect, and manage your published and scheduled Instagram posts.
             </p>
           </div>
         </div>

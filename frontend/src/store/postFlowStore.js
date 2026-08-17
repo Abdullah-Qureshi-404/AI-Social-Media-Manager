@@ -17,6 +17,10 @@ export const usePostFlowStore = create((set) => ({
   captionSkipped: false,
   hashtagsSkipped: false,
 
+  // AI Recommendation Metadata (belongs to current post flow)
+  recommendedPreset: null,
+  recommendedCaptionId: null,
+
   // Smart Overlay Design System
   overlayDesign: null,       // AI-generated overlay design JSON from backend
   fabricCanvasJson: null,    // Full Fabric.js canvas state after manual editing
@@ -36,6 +40,10 @@ export const usePostFlowStore = create((set) => ({
   setEditorImageUrl: (url) => set({ editorImageUrl: url }),
   setCaptionSkipped: (skipped) => set({ captionSkipped: skipped }),
   setHashtagsSkipped: (skipped) => set({ hashtagsSkipped: skipped }),
+  setRecommendedPreset: (preset) => set({ recommendedPreset: preset }),
+  setRecommendedCaptionId: (id) => set({ recommendedCaptionId: id }),
+  setRecommendations: (preset, captionId) =>
+    set({ recommendedPreset: preset, recommendedCaptionId: captionId }),
   setOverlayDesign: (design) => set({ overlayDesign: design }),
   setFabricCanvasJson: (json) => set({ fabricCanvasJson: json }),
 
@@ -56,7 +64,10 @@ export const usePostFlowStore = create((set) => ({
       editorImageUrl: null,
       captionSkipped: false,
       hashtagsSkipped: false,
+      recommendedPreset: null,
+      recommendedCaptionId: null,
       overlayDesign: null,
       fabricCanvasJson: null,
     }),
 }));
+

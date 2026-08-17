@@ -171,8 +171,8 @@ export default function CreatePost({ context }) {
         <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center space-x-3 text-xs shadow-lg">
           <Lightbulb className="w-5 h-5 text-amber-400 shrink-0" />
           <div>
-            <h4 className="font-semibold text-amber-400">AI Strategy Active</h4>
-            <p className="text-zinc-300 mt-0.5">Upload a photo of your menu item to fulfill this recommendation. Gemini will automatically tailor the caption.</p>
+            <h4 className="font-semibold text-amber-400">Content Strategy Active</h4>
+            <p className="text-zinc-300 mt-0.5">Upload a photo of your menu item to fulfill this recommendation. The system will tailor on-brand captions.</p>
           </div>
         </div>
       )}
