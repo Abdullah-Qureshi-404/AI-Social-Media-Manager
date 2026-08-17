@@ -96,8 +96,17 @@ def create_refresh_token(user_id: uuid.UUID) -> str:
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
+def revoke_user_tokens(user_id: uuid.UUID) -> None:
+    """Record a global token revocation timestamp for user_id in Redis (TTL 24h)."""
+    try:
+        now_ts = math.floor(datetime.now(timezone.utc).timestamp())
+        redis_client.setex(f"user_revoked:{user_id}", 86400, str(now_ts))
+    except Exception as e:
+        logger.warning(f"Failed to set user revocation for {user_id}: {e}")
+
+
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
-    """Decode and validate JWT token payload, enforcing blocklist checks."""
+    """Decode and validate JWT token payload, enforcing blocklist and user revocation checks."""
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -105,6 +114,20 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         jti = payload.get("jti")
         if jti and is_token_blocked(jti):
             return None
+
+        # Check for user-level session revocation (e.g. after password reset)
+        user_id_str = payload.get("sub")
+        iat = payload.get("iat")
+        if user_id_str and iat:
+            try:
+                revoked_ts_str = redis_client.get(f"user_revoked:{user_id_str}")
+                if revoked_ts_str:
+                    revoked_ts = int(revoked_ts_str)
+                    if iat <= revoked_ts:
+                        return None
+            except Exception:
+                pass
+
         return payload
     except JWTError:
         return None

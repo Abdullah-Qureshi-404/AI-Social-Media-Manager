@@ -102,11 +102,7 @@ async def _async_publish_due_posts():
                 logger.exception(f"Failed to publish post {post.id}: {e}")
 
                 post.retry_count += 1
-                if post.retry_count <= 3:
-                    post.status = PostStatusEnum.RETRYING
-                else:
-                    post.status = PostStatusEnum.FAILED
-
+                post.status = PostStatusEnum.FAILED
                 post.error_message = str(e)
                 await db.commit()
 

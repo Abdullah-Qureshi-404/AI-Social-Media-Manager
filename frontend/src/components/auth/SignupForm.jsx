@@ -76,6 +76,7 @@ export default function SignupForm({ onToggleLogin, onFocusField, onTogglePasswo
             label="Full Name"
             icon={User}
             name="fullName"
+            autoComplete="name"
             placeholder="e.g. Abdullah Qureshi"
             register={register}
             error={errors.fullName}
@@ -88,6 +89,7 @@ export default function SignupForm({ onToggleLogin, onFocusField, onTogglePasswo
             label="Restaurant Name"
             icon={Building}
             name="businessName"
+            autoComplete="organization"
             placeholder="e.g. Musafor Cafe"
             register={register}
             error={errors.businessName}
@@ -102,6 +104,7 @@ export default function SignupForm({ onToggleLogin, onFocusField, onTogglePasswo
           icon={Mail}
           type="email"
           name="email"
+          autoComplete="email"
           placeholder="owner@restaurant.com"
           register={register}
           error={errors.email}
@@ -116,6 +119,7 @@ export default function SignupForm({ onToggleLogin, onFocusField, onTogglePasswo
             icon={Lock}
             type="password"
             name="password"
+            autoComplete="new-password"
             placeholder="••••••••"
             register={register}
             error={errors.password}
@@ -130,6 +134,7 @@ export default function SignupForm({ onToggleLogin, onFocusField, onTogglePasswo
             icon={Lock}
             type="password"
             name="confirmPassword"
+            autoComplete="new-password"
             placeholder="••••••••"
             register={register}
             error={errors.confirmPassword}

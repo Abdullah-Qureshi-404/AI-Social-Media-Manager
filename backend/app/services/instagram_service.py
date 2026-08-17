@@ -200,11 +200,12 @@ class InstagramService:
                 }
         except AppException:
             raise
-        except Exception:
-            return {
-                "access_token": f"refreshed_{current_token}",
-                "expires_at": datetime.utcnow() + timedelta(days=60),
-            }
+        except Exception as e:
+            logger.error(f"Instagram token refresh unexpected error: {e}")
+            raise AppException(
+                message=f"Failed to refresh Instagram token: {str(e)}",
+                code="META_TOKEN_REFRESH_FAILED",
+            )
 
     async def fetch_post_analytics(
         self, instagram_media_id: str, access_token: str
@@ -213,8 +214,8 @@ class InstagramService:
         Fetch engagement insights (likes, reach, comments, saves) for a published post.
         GET https://graph.instagram.com/v21.0/{instagram_media_id}/insights?metric=reach,saved,engagement&access_token={token}
         """
-        if instagram_media_id.startswith("ig_media_") or access_token.startswith("demo_"):
-            return {"likes": 142, "reach": 1280, "saves": 38, "comments": 15}
+        if not instagram_media_id or not access_token:
+            return {"likes": 0, "reach": 0, "saves": 0, "comments": 0}
 
         url = f"https://graph.instagram.com/v21.0/{instagram_media_id}/insights"
         params = {
@@ -226,19 +227,21 @@ class InstagramService:
             async with httpx.AsyncClient() as http_client:
                 res = await http_client.get(url, params=params, timeout=15.0)
                 if res.status_code != 200:
-                    return {"likes": 142, "reach": 1280, "saves": 38, "comments": 15}
+                    logger.warning(f"Instagram insights fetch returned HTTP {res.status_code}: {res.text}")
+                    return {"likes": 0, "reach": 0, "saves": 0, "comments": 0}
 
                 data = res.json().get("data", [])
                 metrics = {item["name"]: item["values"][0]["value"] for item in data if "name" in item and "values" in item}
 
                 return {
-                    "reach": metrics.get("reach", 1280),
-                    "saves": metrics.get("saved", 38),
-                    "likes": metrics.get("engagement", 142),
-                    "comments": 15,
+                    "reach": metrics.get("reach", 0),
+                    "saves": metrics.get("saved", 0),
+                    "likes": metrics.get("engagement", 0),
+                    "comments": 0,
                 }
-        except Exception:
-            return {"likes": 142, "reach": 1280, "saves": 38, "comments": 15}
+        except Exception as e:
+            logger.error(f"Instagram insights fetch error: {e}")
+            return {"likes": 0, "reach": 0, "saves": 0, "comments": 0}
 
     async def exchange_code_for_token(
         self,

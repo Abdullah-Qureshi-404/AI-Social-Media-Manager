@@ -8,6 +8,10 @@ from app.main import app
 from app.core.database import Base, get_db
 from app.core.security import create_access_token, hash_password
 from app.models.user import User
+from app.middleware.rate_limit import limiter
+
+# Disable rate-limiting middleware storage hits during pytest isolation tests
+limiter.enabled = False
 
 # In-Memory SQLite for fast isolation tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

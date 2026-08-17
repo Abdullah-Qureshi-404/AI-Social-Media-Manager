@@ -64,6 +64,32 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  forgotPassword: async (email) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await client.post('/auth/forgot-password', { email });
+      set({ isLoading: false });
+      return { success: true, message: res.data.message };
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to request password reset';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  resetPassword: async (token, newPassword) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await client.post('/auth/reset-password', { token, new_password: newPassword });
+      set({ isLoading: false });
+      return { success: true, message: res.data.message };
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to reset password';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
   loginAsDemo: async () => {
     set({ isLoading: true, error: null });
     const demoEmail = 'owner@restaurant.com';

@@ -11,7 +11,7 @@ import EditModal from '../components/post/EditModal';
 import { usePostFlowStore } from '../store/postFlowStore';
 import { postsApi } from '../api/postsApi';
 import { subscribeToJobStream } from '../api/jobStreamer';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Check } from 'lucide-react';
 
 export default function CreatePost({ context }) {
   const {
@@ -107,8 +107,8 @@ export default function CreatePost({ context }) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      {/* Flow Wizard Navigation Bar */}
-      <div className="flex items-center justify-between border-b border-stone-800 pb-4 overflow-x-auto">
+      {/* Polished Flow Wizard Progress Stepper */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-6 overflow-x-auto relative px-2">
         {[
           { num: 1, label: 'Upload' },
           { num: 2, label: 'Enhancement' },
@@ -116,46 +116,63 @@ export default function CreatePost({ context }) {
           { num: 4, label: 'Overlay' },
           { num: 5, label: 'Preview' },
           { num: 6, label: 'Schedule' },
-        ].map((s) => {
+        ].map((s, idx, arr) => {
           const allowed = isStepAllowed(s.num);
           const isActive = activeStep === s.num;
+          const isCompleted = activeStep > s.num;
+
           return (
-            <button
-              key={s.num}
-              onClick={() => allowed && setStep(s.num)}
-              disabled={!allowed}
-              className={`flex items-center space-x-2 font-semibold text-xs sm:text-sm shrink-0 px-3 py-1 transition ${
-                isActive
-                  ? 'text-amber-400 font-bold border-b-2 border-amber-400 pb-1'
-                  : allowed
-                  ? 'text-stone-400 hover:text-stone-200 cursor-pointer'
-                  : 'text-stone-600 opacity-40 cursor-not-allowed'
-              }`}
-            >
-              <span
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+            <React.Fragment key={s.num}>
+              <button
+                onClick={() => allowed && setStep(s.num)}
+                disabled={!allowed}
+                className={`flex items-center space-x-2.5 font-semibold text-xs sm:text-sm shrink-0 transition relative z-10 ${
                   isActive
-                    ? 'bg-amber-500 text-stone-950 shadow-md'
+                    ? 'text-amber-400 font-bold'
+                    : isCompleted
+                    ? 'text-zinc-200 hover:text-white cursor-pointer'
                     : allowed
-                    ? 'bg-stone-800 text-stone-400'
-                    : 'bg-stone-900 text-stone-600 border border-stone-800'
+                    ? 'text-zinc-400 hover:text-zinc-200 cursor-pointer'
+                    : 'text-zinc-600 opacity-40 cursor-not-allowed'
                 }`}
               >
-                {s.num}
-              </span>
-              <span className="hidden sm:inline">{s.label}</span>
-            </button>
+                <span
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/20'
+                      : isActive
+                      ? 'bg-amber-500 text-zinc-950 ring-4 ring-amber-500/30 animate-pulse shadow-lg shadow-amber-500/30'
+                      : allowed
+                      ? 'bg-zinc-800 text-zinc-300 border border-white/10'
+                      : 'bg-zinc-900 text-zinc-600 border border-white/5'
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-4 h-4 text-zinc-950 stroke-[3]" /> : s.num}
+                </span>
+                <span className="hidden sm:inline">{s.label}</span>
+              </button>
+
+              {idx < arr.length - 1 && (
+                <div className="flex-1 mx-2 hidden sm:block h-0.5 min-w-[20px]">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      activeStep > s.num ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-zinc-800'
+                    }`}
+                  />
+                </div>
+              )}
+            </React.Fragment>
           );
         })}
       </div>
 
       {/* Context Banner */}
       {context?.menuItemId && activeStep === 1 && (
-        <div className="bg-amber-900/30 border border-amber-500/30 p-4 rounded-xl flex items-center space-x-3">
-          <Lightbulb className="w-6 h-6 text-amber-500 shrink-0" />
+        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center space-x-3 text-xs shadow-lg">
+          <Lightbulb className="w-5 h-5 text-amber-400 shrink-0" />
           <div>
-            <h4 className="font-bold text-amber-400">AI Strategy Active</h4>
-            <p className="text-sm text-stone-300">Upload a photo of your menu item to fulfill this recommendation. Gemini will automatically tailor the caption.</p>
+            <h4 className="font-semibold text-amber-400">AI Strategy Active</h4>
+            <p className="text-zinc-300 mt-0.5">Upload a photo of your menu item to fulfill this recommendation. Gemini will automatically tailor the caption.</p>
           </div>
         </div>
       )}
@@ -182,9 +199,9 @@ export default function CreatePost({ context }) {
             />
             <button
               onClick={() => setStep(3)}
-              className="w-full mt-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-stone-950 font-extrabold rounded-xl shadow-lg transition"
+              className="w-full mt-6 py-3 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-semibold rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/15 transition flex items-center justify-center space-x-2"
             >
-              Next: Caption Style & Hashtags ➔
+              <span>Next: Caption Style & Hashtags ➔</span>
             </button>
           </div>
         </div>

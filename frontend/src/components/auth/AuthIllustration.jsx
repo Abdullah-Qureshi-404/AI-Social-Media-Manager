@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coffee, Instagram, ShieldCheck, Sparkles } from 'lucide-react';
+import { Coffee, Instagram } from 'lucide-react';
 
-export default function AuthIllustration({ focusedField, isPasswordShow }) {
+export default function AuthIllustration({ focusedField }) {
   // Normalized mouse coordinates from -1.0 (left/top) to +1.0 (right/bottom)
   const [normMouse, setNormMouse] = useState({ x: 0, y: 0 });
 
@@ -19,12 +19,17 @@ export default function AuthIllustration({ focusedField, isPasswordShow }) {
   }, []);
 
   // Compute pupil position (px offset relative to eye center)
+  // PRIVACY RULE: Password field is completely invisible to character tracking.
   const getPupilOffset = (multiplierX = 8, multiplierY = 6) => {
+    if (focusedField === 'password') {
+      // Disable character eye tracking completely for password fields
+      return { x: 0, y: 0 };
+    }
     if (focusedField === 'email') {
       return { x: 7, y: 1 }; // Look right at form
     }
-    if (focusedField === 'password') {
-      return { x: -3, y: 5 }; // Look down shyly
+    if (focusedField === 'name' || focusedField === 'business') {
+      return { x: 5, y: 1 }; // Look at non-sensitive form input
     }
     return {
       x: Math.max(-8, Math.min(8, normMouse.x * multiplierX)),
@@ -35,16 +40,19 @@ export default function AuthIllustration({ focusedField, isPasswordShow }) {
   const pupil = getPupilOffset();
 
   // Character body tilt angle (degrees) tracking mouse & focus
+  // PRIVACY RULE: Disable tracking / movement when password field is active.
   const getBodyRotation = (baseFactor = 6) => {
+    if (focusedField === 'password') return 0;
     if (focusedField === 'email') return 8;
-    if (focusedField === 'password') return -4;
+    if (focusedField === 'name' || focusedField === 'business') return 5;
     return normMouse.x * baseFactor;
   };
 
   // Character body X translation tracking mouse
   const getBodyX = (baseFactor = 10) => {
+    if (focusedField === 'password') return 0;
     if (focusedField === 'email') return 12;
-    if (focusedField === 'password') return -6;
+    if (focusedField === 'name' || focusedField === 'business') return 8;
     return normMouse.x * baseFactor;
   };
 
@@ -196,34 +204,20 @@ export default function AuthIllustration({ focusedField, isPasswordShow }) {
           >
             {/* Eyes */}
             <div className="flex space-x-4 items-center">
-              {isPasswordShow ? (
-                // Shocked / Wide eyes when password is visible
-                <>
-                  <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center font-black text-amber-400 text-xs">
-                    O
-                  </div>
-                  <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center font-black text-amber-400 text-xs">
-                    O
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center relative overflow-hidden">
-                    <motion.div
-                      animate={{ x: pupil.x * 0.7, y: pupil.y * 0.7 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className="w-2 h-2 bg-white rounded-full"
-                    />
-                  </div>
-                  <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center relative overflow-hidden">
-                    <motion.div
-                      animate={{ x: pupil.x * 0.7, y: pupil.y * 0.7 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className="w-2 h-2 bg-white rounded-full"
-                    />
-                  </div>
-                </>
-              )}
+              <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center relative overflow-hidden">
+                <motion.div
+                  animate={{ x: pupil.x * 0.7, y: pupil.y * 0.7 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="w-2 h-2 bg-white rounded-full"
+                />
+              </div>
+              <div className="w-5 h-5 bg-stone-950 rounded-full flex items-center justify-center relative overflow-hidden">
+                <motion.div
+                  animate={{ x: pupil.x * 0.7, y: pupil.y * 0.7 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                  className="w-2 h-2 bg-white rounded-full"
+                />
+              </div>
             </div>
 
             {/* Smile Mouth */}

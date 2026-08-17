@@ -16,7 +16,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export default function LoginForm({ onToggleSignup, onFocusField, onTogglePasswordShow }) {
+export default function LoginForm({ onToggleSignup, onToggleForgotPassword, onFocusField, onTogglePasswordShow }) {
   const { login, loginAsDemo, isLoading, error } = useAuthStore();
 
   const {
@@ -67,6 +67,7 @@ export default function LoginForm({ onToggleSignup, onFocusField, onTogglePasswo
           icon={Mail}
           type="email"
           name="email"
+          autoComplete="email"
           placeholder="owner@restaurant.com"
           register={register}
           error={errors.email}
@@ -75,19 +76,31 @@ export default function LoginForm({ onToggleSignup, onFocusField, onTogglePasswo
           required
         />
 
-        <AuthInput
-          label="Password"
-          icon={Lock}
-          type="password"
-          name="password"
-          placeholder="••••••••"
-          register={register}
-          error={errors.password}
-          onFocus={() => onFocusField && onFocusField('password')}
-          onBlur={() => onFocusField && onFocusField(null)}
-          onTogglePasswordShow={onTogglePasswordShow}
-          required
-        />
+        <div className="space-y-1">
+          <AuthInput
+            label="Password"
+            icon={Lock}
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            register={register}
+            error={errors.password}
+            onFocus={() => onFocusField && onFocusField('password')}
+            onBlur={() => onFocusField && onFocusField(null)}
+            onTogglePasswordShow={onTogglePasswordShow}
+            required
+          />
+          <div className="flex justify-end pt-1">
+            <button
+              type="button"
+              onClick={onToggleForgotPassword}
+              className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition cursor-pointer"
+            >
+              Forgot password?
+            </button>
+          </div>
+        </div>
 
         <AuthButton
           type="submit"

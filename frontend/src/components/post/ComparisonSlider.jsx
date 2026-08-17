@@ -7,7 +7,7 @@ export default function ComparisonSlider({ originalUrl, editedUrl }) {
 
   if (!isEnhanced) {
     return (
-      <div className="relative w-full aspect-square max-w-lg mx-auto rounded-2xl overflow-hidden border border-stone-800 bg-stone-950 shadow-2xl select-none">
+      <div className="relative w-full aspect-square max-w-lg mx-auto rounded-2xl overflow-hidden border border-white/10 bg-[#0f0f0f] shadow-2xl select-none">
         <img
           src={originalUrl}
           alt="Original Uploaded Photo"
@@ -21,7 +21,7 @@ export default function ComparisonSlider({ originalUrl, editedUrl }) {
   }
 
   return (
-    <div className="relative w-full aspect-square max-w-lg mx-auto rounded-2xl overflow-hidden border border-stone-800 bg-stone-950 shadow-2xl select-none">
+    <div className="relative w-full aspect-square max-w-lg mx-auto rounded-2xl overflow-hidden border border-white/10 bg-[#0f0f0f] shadow-2xl select-none">
       {/* Right Side Background: Enhanced Photo */}
       <img
         src={editedUrl}
@@ -47,7 +47,7 @@ export default function ComparisonSlider({ originalUrl, editedUrl }) {
         className="absolute top-0 bottom-0 w-1 bg-amber-400 cursor-ew-resize z-10"
         style={{ left: `${sliderPos}%` }}
       >
-        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shadow-xl ring-2 ring-stone-900">
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-bold text-xs shadow-xl ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.5)]">
           ↔
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function ComparisonSlider({ originalUrl, editedUrl }) {
       <div className="absolute bottom-3 left-3 z-10 px-3 py-1 bg-black/70 backdrop-blur rounded-lg text-xs font-semibold text-white border border-white/10">
         Original Photo
       </div>
-      <div className="absolute bottom-3 right-3 z-10 px-3 py-1 bg-amber-500/90 backdrop-blur rounded-lg text-xs font-semibold text-white shadow-lg">
+      <div className="absolute bottom-3 right-3 z-10 px-3 py-1 bg-amber-500/90 backdrop-blur rounded-lg text-xs font-semibold text-zinc-950 shadow-lg">
         Enhanced Photo ✨
       </div>
     </div>

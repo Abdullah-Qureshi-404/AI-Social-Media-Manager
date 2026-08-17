@@ -54,13 +54,13 @@ async def build_tenant_profile_response(user: User, db: AsyncSession) -> TenantP
     is_connected = bool(user.instagram_token or user.instagram_user_id)
     instagram = TenantInstagramSchema(
         connected=is_connected,
-        business_name=user.instagram_business_name or user.business_name or "My Restaurant",
-        username=user.instagram_username or (user.business_name.lower().replace(" ", "_") if user.business_name else "my_restaurant"),
-        profile_picture=user.instagram_profile_picture or user.logo_url or "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=200&q=80",
+        business_name=user.instagram_business_name or user.business_name if is_connected else None,
+        username=user.instagram_username if is_connected else None,
+        profile_picture=user.instagram_profile_picture if is_connected else None,
         followers=user.instagram_followers_count if is_connected else 0,
         following=user.instagram_following_count if is_connected else 0,
         posts=user.instagram_posts_count if is_connected else 0,
-        category=user.instagram_category or "Cafe & Restaurant",
+        category=user.instagram_category if is_connected else None,
         connected_at=user.instagram_connected_at,
         last_sync=user.instagram_last_sync,
         token_expiry=user.token_expires_at,

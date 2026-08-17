@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     FERNET_SECRET_KEY: str = ""
 
+    # SMTP & Email Settings
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = "noreply@aisocialmanager.com"
+    EMAIL_STARTTLS: bool = True
+
     model_config = SettingsConfigDict(
         env_file=str(selected_env),
         env_file_encoding="utf-8",

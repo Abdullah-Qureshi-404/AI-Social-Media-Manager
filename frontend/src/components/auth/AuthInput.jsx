@@ -12,6 +12,7 @@ export default function AuthInput({
   name,
   disabled = false,
   required = false,
+  autoComplete,
   onFocus,
   onBlur,
   onTogglePasswordShow,
@@ -52,6 +53,7 @@ export default function AuthInput({
           type={inputType}
           placeholder={placeholder}
           disabled={disabled}
+          autoComplete={autoComplete}
           onFocus={(e) => {
             if (registeredProps.onFocus) registeredProps.onFocus(e);
             if (onFocus) onFocus(name);
@@ -72,10 +74,11 @@ export default function AuthInput({
           <button
             type="button"
             tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleTogglePassword}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white transition p-1 cursor-pointer"
           >
-            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
         )}
       </div>

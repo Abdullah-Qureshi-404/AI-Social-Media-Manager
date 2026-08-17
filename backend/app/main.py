@@ -66,7 +66,7 @@ app.add_middleware(
         "http://localhost:5173",  # Vite Dev Server
         "http://localhost:3000",
         "http://127.0.0.1:5173",
-        "https://yourdomain.com",  # Production domain placeholder
+        "https://red-rock-05a679710.7.azurestaticapps.net",  # Production frontend Azure Static Web App
     ],
     allow_credentials=True,
     allow_methods=["*"],
